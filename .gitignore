@@ -1,0 +1,24 @@
+# .NET build outputs
+MealplannerApp/MealPlannerApi/bin/
+MealplannerApp/MealPlannerApi/obj/
+
+# Node modules and build output
+MealplannerApp/frontend/node_modules/
+MealplannerApp/frontend/dist/
+
+# EF Core migrations (generated files – keep the Migrations/ folder itself)
+# Comment this out if you want to commit generated migrations
+
+# User secrets
+**/appsettings.Production.json
+**/secrets.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor directories
+.vscode/
+.idea/
+*.swp
+*.swo
