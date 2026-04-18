@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { register as registerApi } from '../services/mealService';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 
 export default function RegisterPage() {
   const [naam, setNaam] = useState('');
@@ -25,8 +25,12 @@ export default function RegisterPage() {
       login(data.token, data.user);
       navigate('/dashboard');
     } catch (err: unknown) {
-      const axiosErr = err as { response?: { data?: { message?: string } } };
-      setError(axiosErr.response?.data?.message ?? 'Registratie mislukt. Probeer het opnieuw.');
+      const axiosErr = err as { response?: { data?: { message?: string } }; code?: string };
+      if (!axiosErr.response) {
+        setError('De backend is niet bereikbaar. Start de API opnieuw en probeer het nog eens.');
+      } else {
+        setError(axiosErr.response.data?.message ?? 'Registratie mislukt. Probeer het opnieuw.');
+      }
     } finally {
       setLoading(false);
     }

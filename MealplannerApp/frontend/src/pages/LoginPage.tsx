@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { login as loginApi } from '../services/mealService';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -20,8 +20,12 @@ export default function LoginPage() {
       login(data.token, data.user);
       navigate('/dashboard');
     } catch (err: unknown) {
-      const axiosErr = err as { response?: { data?: { message?: string } } };
-      setError(axiosErr.response?.data?.message ?? 'Inloggen mislukt. Controleer je gegevens.');
+      const axiosErr = err as { response?: { data?: { message?: string } }; code?: string };
+      if (!axiosErr.response) {
+        setError('De backend is niet bereikbaar. Start de API opnieuw en probeer het nog eens.');
+      } else {
+        setError(axiosErr.response.data?.message ?? 'Inloggen mislukt. Controleer je gegevens.');
+      }
     } finally {
       setLoading(false);
     }
