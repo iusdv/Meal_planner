@@ -29,7 +29,6 @@ public class FavoritesController : ControllerBase
             .Include(f => f.Meal)
             .OrderByDescending(f => f.DatumToegevoegd)
             .ToListAsync();
-
         return Ok(favs.Select(f => new FavoriteDto(
             f.Id, f.MealId, f.Meal.Naam, f.Meal.AfbeeldingUrl, f.DatumToegevoegd)));
     }
