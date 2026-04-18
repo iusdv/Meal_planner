@@ -8,6 +8,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import MealsPage from './pages/MealsPage';
+import MealDetailPage from './pages/MealDetailPage';
 import FavoritesPage from './pages/FavoritesPage';
 import ProfilePage from './pages/ProfilePage';
 import AdminPage from './pages/AdminPage';
@@ -30,6 +31,9 @@ function AppLayout() {
           } />
           <Route path="/meals" element={
             <ProtectedRoute><MealsPage /></ProtectedRoute>
+          } />
+          <Route path="/meals/:id" element={
+            <ProtectedRoute><MealDetailPage /></ProtectedRoute>
           } />
           <Route path="/favorites" element={
             <ProtectedRoute><FavoritesPage /></ProtectedRoute>
