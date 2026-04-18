@@ -2,6 +2,7 @@ using System.Security.Claims;
 using MealPlannerApi.Data;
 using MealPlannerApi.DTOs;
 using MealPlannerApi.Models;
+using MealPlannerApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -14,20 +15,47 @@ namespace MealPlannerApi.Controllers;
 public class MealsController : ControllerBase
 {
     private readonly MealPlannerDbContext _db;
+    private readonly TheMealDbService _theMealDbService;
+    private readonly FoodDataCentralService _foodDataCentralService;
+    private readonly ILogger<MealsController> _logger;
 
-    public MealsController(MealPlannerDbContext db) => _db = db;
+    public MealsController(
+        MealPlannerDbContext db,
+        TheMealDbService theMealDbService,
+        FoodDataCentralService foodDataCentralService,
+        ILogger<MealsController> logger)
+    {
+        _db = db;
+        _theMealDbService = theMealDbService;
+        _foodDataCentralService = foodDataCentralService;
+        _logger = logger;
+    }
 
     [HttpGet]
     [AllowAnonymous]
     public async Task<IActionResult> GetAll()
     {
+        var mealCount = await _db.Meals.CountAsync();
+        if (mealCount < 120)
+        {
+            try
+            {
+                await _theMealDbService.ImportStarterMealsAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "TheMealDB import failed.");
+                return StatusCode(503, new { message = "Maaltijden konden niet worden opgehaald bij TheMealDB. Probeer het later opnieuw." });
+            }
+        }
+
         var meals = await _db.Meals
             .Include(m => m.MealIngredients)
                 .ThenInclude(mi => mi.Ingredient)
                     .ThenInclude(i => i.NutritionalValue)
             .ToListAsync();
 
-        return Ok(meals.Select(MapToDto));
+        return Ok(meals.Select(meal => MapToDto(meal)));
     }
 
     [HttpGet("{id}")]
@@ -40,7 +68,39 @@ public class MealsController : ControllerBase
                     .ThenInclude(i => i.NutritionalValue)
             .FirstOrDefaultAsync(m => m.Id == id);
 
-        return meal == null ? NotFound() : Ok(MapToDto(meal));
+        if (meal != null)
+        {
+            try
+            {
+                //TODO change to put meal in database instead of contantly making api calls
+                if (await _theMealDbService.EnrichMealDetailsAsync(meal))
+                {
+                    await _db.SaveChangesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "TheMealDB detail enrichment failed for meal {MealId}. Returning stored meal data.", id);
+            }
+        }
+
+        if (meal == null)
+        {
+            return NotFound();
+        }
+
+        NutritionFactsDto? nutritionFacts = null;
+        try
+        {
+            //TODO PUT FOOD DATA CENTRAL IN DATABASE INSTEAD OF CONSTANTLY MAKING API CALLS
+            nutritionFacts = await _foodDataCentralService.BuildNutritionFactsAsync(meal);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Nutrition enrichment failed for meal {MealId}. Returning recipe without extended nutrition.", id);
+        }
+
+        return Ok(MapToDto(meal, nutritionFacts));
     }
 
     [HttpPost]
@@ -51,9 +111,12 @@ public class MealsController : ControllerBase
         {
             Naam = dto.Naam,
             Beschrijving = dto.Beschrijving,
+            Instructies = dto.Beschrijving,
             Categorie = dto.Categorie,
             Bereidingstijd = dto.Bereidingstijd,
-            AfbeeldingUrl = dto.AfbeeldingUrl
+            Porties = 1,
+            AfbeeldingUrl = dto.AfbeeldingUrl,
+            DieetLabels = string.Empty
         };
         _db.Meals.Add(meal);
         await _db.SaveChangesAsync();
@@ -67,23 +130,33 @@ public class MealsController : ControllerBase
         var meal = await _db.Meals.FindAsync(id);
         if (meal == null) return NotFound();
         _db.Meals.Remove(meal);
-        await _db.SaveChangesAsync();
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            return Conflict(new { message = "Maaltijd kan niet worden verwijderd omdat deze nog gekoppeld is aan planning of favorieten." });
+        }
+
         return NoContent();
     }
 
-    private static MealDto MapToDto(Meal m) => new(
-        m.Id, m.Naam, m.Beschrijving, m.Categorie, m.Bereidingstijd, m.AfbeeldingUrl,
+    private static MealDto MapToDto(Meal m, NutritionFactsDto? nutritionFacts = null) => new(
+        m.Id, m.Naam, m.Beschrijving, m.Instructies, m.Categorie, m.Bereidingstijd, m.Porties, m.AfbeeldingUrl, m.DieetLabels,
         m.MealIngredients.Select(mi => new MealIngredientDto(
             mi.IngredientId,
             mi.Ingredient.Naam,
             mi.Hoeveelheid,
             mi.Ingredient.Eenheid,
+            mi.OrigineleHoeveelheid,
             mi.Ingredient.NutritionalValue == null ? null : new NutritionalValueDto(
                 mi.Ingredient.NutritionalValue.Kcal,
                 mi.Ingredient.NutritionalValue.Eiwit,
                 mi.Ingredient.NutritionalValue.Koolhydraat,
                 mi.Ingredient.NutritionalValue.Vet
             )
-        )).ToList()
+        )).ToList(),
+        nutritionFacts
     );
 }
