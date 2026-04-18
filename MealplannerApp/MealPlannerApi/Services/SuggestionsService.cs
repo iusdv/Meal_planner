@@ -1,16 +1,12 @@
-using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using MealPlannerApi.Data;
-using MealPlannerApi.DTOs;
 using Microsoft.EntityFrameworkCore;
 
 namespace MealPlannerApi.Services;
 
 /// <summary>
-/// SuggestionsService implements the Model Context Protocol (MCP) pattern.
-/// It enriches every AI request with user context (profile + goals) before
-/// sending to the Gemini API, enabling personalised meal suggestions.
+/// Enriches AI requests with the user's profile and goal before calling Gemini.
 /// </summary>
 public class SuggestionsService
 {
@@ -27,11 +23,9 @@ public class SuggestionsService
 
     public async Task<string> GetSuggestionAsync(int userId, string userQuestion)
     {
-        // MCP Step 1 – Gather context
-        var profile = await _db.Profiles.FirstOrDefaultAsync(p => p.UserId == userId);
-        var goal = await _db.Goals.FirstOrDefaultAsync(g => g.UserId == userId);
+        var profile = await _db.Profiles.FirstOrDefaultAsync(profile => profile.UserId == userId);
+        var goal = await _db.Goals.FirstOrDefaultAsync(goal => goal.UserId == userId);
 
-        // MCP Step 2 – Build context-enriched prompt
         var contextBuilder = new StringBuilder();
         contextBuilder.AppendLine("Je bent een persoonlijke voedingscoach. Geef advies op basis van het volgende gebruikersprofiel:");
 
@@ -40,7 +34,10 @@ public class SuggestionsService
             contextBuilder.AppendLine($"- Geslacht: {profile.Gender}");
             contextBuilder.AppendLine($"- Leeftijd: {profile.Leeftijd} jaar");
             contextBuilder.AppendLine($"- Gewicht: {profile.Gewicht} kg");
+            contextBuilder.AppendLine($"- Lengte: {profile.LengteCm} cm");
             contextBuilder.AppendLine($"- Activiteitsniveau: {profile.Activiteit}");
+            contextBuilder.AppendLine($"- Dieetvoorkeur: {profile.Dieetvoorkeur}");
+            contextBuilder.AppendLine($"- Allergieen of vermijdingen: {profile.Allergieen}");
         }
 
         if (goal != null)
@@ -54,11 +51,8 @@ public class SuggestionsService
         contextBuilder.AppendLine();
         contextBuilder.AppendLine($"Gebruikersvraag: {userQuestion}");
 
-        var fullPrompt = contextBuilder.ToString();
-
-        // MCP Step 3 – Call AI model (Gemini)
         var apiKey = _config["Gemini:ApiKey"];
-        if (string.IsNullOrEmpty(apiKey))
+        if (string.IsNullOrWhiteSpace(apiKey) || apiKey.StartsWith("YOUR_", StringComparison.OrdinalIgnoreCase))
         {
             return "AI-suggesties zijn tijdelijk niet beschikbaar (API-sleutel niet geconfigureerd). " +
                    "Voeg een Gemini API-sleutel toe in de configuratie.";
@@ -70,15 +64,15 @@ public class SuggestionsService
             {
                 new
                 {
-                    parts = new[] { new { text = fullPrompt } }
+                    parts = new[] { new { text = contextBuilder.ToString() } }
                 }
             }
         };
 
         var json = JsonSerializer.Serialize(requestBody);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
-
         var model = _config["Gemini:Model"] ?? "gemini-1.5-flash";
+
         var response = await _httpClient.PostAsync(
             $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}",
             content);
