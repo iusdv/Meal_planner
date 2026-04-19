@@ -4,6 +4,7 @@ public class Goal
 {
     public int Id { get; set; }
     public int UserId { get; set; }
+    public string DoelType { get; set; } = "Balans";
     public double Caloriedoel { get; set; }
     public double Eiwitdoel { get; set; }
     public double Koolhydraatdoel { get; set; }
