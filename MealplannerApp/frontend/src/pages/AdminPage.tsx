@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getMeals } from '../services/mealService';
 import api from '../services/api';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import type { MealDto } from '../types';
 
 export default function AdminPage() {
