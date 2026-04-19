@@ -5,6 +5,9 @@ MealplannerApp/MealPlannerApi/obj/
 # Node modules and build output
 MealplannerApp/frontend/node_modules/
 MealplannerApp/frontend/dist/
+MealplannerApp/frontend/.env
+MealplannerApp/MealPlannerApi/.env
+runtime-logs/
 
 # EF Core migrations (generated files – keep the Migrations/ folder itself)
 # Comment this out if you want to commit generated migrations
