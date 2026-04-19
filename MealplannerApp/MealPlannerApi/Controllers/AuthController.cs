@@ -27,6 +27,14 @@ public class AuthController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterDto dto)
     {
+        if (string.IsNullOrWhiteSpace(dto.Naam) ||
+            string.IsNullOrWhiteSpace(dto.Email) ||
+            string.IsNullOrWhiteSpace(dto.Wachtwoord))
+            return BadRequest(new { message = "Vul naam, e-mailadres en wachtwoord in." });
+
+        if (dto.Wachtwoord.Length < 6)
+            return BadRequest(new { message = "Wachtwoord moet minimaal 6 tekens bevatten." });
+
         if (await _db.Users.AnyAsync(u => u.Email == dto.Email))
             return Conflict(new { message = "E-mailadres is al in gebruik." });
 
@@ -49,6 +57,9 @@ public class AuthController : ControllerBase
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginDto dto)
     {
+        if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Wachtwoord))
+            return BadRequest(new { message = "Vul je e-mailadres en wachtwoord in." });
+
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
 
         // Use constant-time BCrypt.Verify to prevent timing attacks

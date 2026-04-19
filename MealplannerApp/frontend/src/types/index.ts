@@ -17,6 +17,7 @@ export interface MealIngredientDto {
   ingredientNaam: string;
   hoeveelheid: number;
   eenheid: string;
+  origineleHoeveelheid: string;
   voedingswaarde?: NutritionalValueDto;
 }
 
@@ -31,10 +32,35 @@ export interface MealDto {
   id: number;
   naam: string;
   beschrijving: string;
+  instructies: string;
   categorie: string;
   bereidingstijd: number;
+  porties: number;
   afbeeldingUrl?: string;
+  dieetLabels: string;
   ingredienten: MealIngredientDto[];
+  nutritionFacts?: NutritionFactsDto | null;
+}
+
+export interface NutritionFactsDto {
+  servingGrams: number;
+  estimated: boolean;
+  source: string;
+  sections: NutritionFactSectionDto[];
+}
+
+export interface NutritionFactSectionDto {
+  title: string;
+  rows: NutritionFactRowDto[];
+}
+
+export interface NutritionFactRowDto {
+  key: string;
+  label: string;
+  value: number;
+  unit: string;
+  dailyValuePercent: number | null;
+  highlight: boolean;
 }
 
 export interface PlannedMealDto {
@@ -61,12 +87,18 @@ export interface ProfileDto {
   gender: string;
   leeftijd: number;
   gewicht: number;
+  lengteCm: number;
   activiteit: string;
+  dieetvoorkeur: string;
+  allergieen: string;
+  maaltijdenPerDag: number;
+  gewensteMaaltijden: string;
 }
 
 export interface GoalDto {
   id: number;
   userId: number;
+  doelType: string;
   caloriedoel: number;
   eiwitdoel: number;
   koolhydraatdoel: number;

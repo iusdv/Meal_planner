@@ -20,6 +20,7 @@ public class JwtService
         var jwtKey = _config["Jwt:Key"] ?? throw new InvalidOperationException("JWT key not configured.");
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        var expiresHours = _config.GetValue("Jwt:ExpiresHours", 8);
 
         var claims = new[]
         {
@@ -33,7 +34,7 @@ public class JwtService
             issuer: _config["Jwt:Issuer"],
             audience: _config["Jwt:Audience"],
             claims: claims,
-            expires: DateTime.UtcNow.AddHours(8),
+            expires: DateTime.UtcNow.AddHours(expiresHours),
             signingCredentials: creds
         );
 
