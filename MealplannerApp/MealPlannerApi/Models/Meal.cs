@@ -5,9 +5,13 @@ public class Meal
     public int Id { get; set; }
     public string Naam { get; set; } = string.Empty;
     public string Beschrijving { get; set; } = string.Empty;
+    public string Instructies { get; set; } = string.Empty;
     public string Categorie { get; set; } = string.Empty;
     public int Bereidingstijd { get; set; }
+    public int Porties { get; set; } = 1;
     public string? AfbeeldingUrl { get; set; }
+    public string? ExternalMealDbId { get; set; }
+    public string DieetLabels { get; set; } = string.Empty;
 
     public ICollection<MealIngredient> MealIngredients { get; set; } = new List<MealIngredient>();
     public ICollection<PlannedMeal> PlannedMeals { get; set; } = new List<PlannedMeal>();

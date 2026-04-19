@@ -71,16 +71,20 @@ public static class SeedData
         {
             Naam = "Havermoutpap",
             Beschrijving = "Gezond ontbijt met havermout en melk",
+            Instructies = "Verwarm de melk, roer de havermout erdoor en laat kort koken tot de pap romig is.",
             Categorie = "Ontbijt",
             Bereidingstijd = 10,
+            Porties = 1,
             AfbeeldingUrl = "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400"
         };
         var diner = new Meal
         {
             Naam = "Kip met rijst en broccoli",
             Beschrijving = "Eiwitrijk diner met groenten",
+            Instructies = "Kook de rijst, bak de kip gaar en stoom de broccoli. Serveer samen op een bord.",
             Categorie = "Diner",
             Bereidingstijd = 30,
+            Porties = 1,
             AfbeeldingUrl = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400"
         };
         context.Meals.AddRange(ontbijt, diner);
@@ -88,11 +92,11 @@ public static class SeedData
 
         // --- MealIngredients ---
         context.MealIngredients.AddRange(
-            new MealIngredient { MealId = ontbijt.Id, IngredientId = havermout.Id, Hoeveelheid = 80 },
-            new MealIngredient { MealId = ontbijt.Id, IngredientId = melk.Id, Hoeveelheid = 200 },
-            new MealIngredient { MealId = diner.Id, IngredientId = kip.Id, Hoeveelheid = 200 },
-            new MealIngredient { MealId = diner.Id, IngredientId = rijst.Id, Hoeveelheid = 100 },
-            new MealIngredient { MealId = diner.Id, IngredientId = broccoli.Id, Hoeveelheid = 150 }
+            new MealIngredient { MealId = ontbijt.Id, IngredientId = havermout.Id, Hoeveelheid = 80, OrigineleHoeveelheid = "80 g" },
+            new MealIngredient { MealId = ontbijt.Id, IngredientId = melk.Id, Hoeveelheid = 200, OrigineleHoeveelheid = "200 ml" },
+            new MealIngredient { MealId = diner.Id, IngredientId = kip.Id, Hoeveelheid = 200, OrigineleHoeveelheid = "200 g" },
+            new MealIngredient { MealId = diner.Id, IngredientId = rijst.Id, Hoeveelheid = 100, OrigineleHoeveelheid = "100 g" },
+            new MealIngredient { MealId = diner.Id, IngredientId = broccoli.Id, Hoeveelheid = 150, OrigineleHoeveelheid = "150 g" }
         );
 
         // --- Favorites ---

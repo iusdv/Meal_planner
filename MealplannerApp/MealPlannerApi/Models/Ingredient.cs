@@ -8,4 +8,5 @@ public class Ingredient
 
     public NutritionalValue? NutritionalValue { get; set; }
     public ICollection<MealIngredient> MealIngredients { get; set; } = new List<MealIngredient>();
+    public ICollection<IngredientNutritionMapping> NutritionMappings { get; set; } = new List<IngredientNutritionMapping>();
 }

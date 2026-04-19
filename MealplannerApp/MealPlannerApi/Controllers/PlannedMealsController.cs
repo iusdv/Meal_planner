@@ -41,17 +41,27 @@ public class PlannedMealsController : ControllerBase
         var meal = await _db.Meals.FindAsync(dto.MealId);
         if (meal == null) return NotFound(new { message = "Maaltijd niet gevonden." });
 
-        var planned = new PlannedMeal
+        var plannedDate = DateTime.SpecifyKind(dto.Datum.Date, DateTimeKind.Utc);
+        var planned = await _db.PlannedMeals.FirstOrDefaultAsync(pm =>
+            pm.UserId == userId &&
+            pm.Datum == plannedDate &&
+            pm.Maaltijdtype == dto.Maaltijdtype);
+
+        if (planned == null)
         {
-            UserId = userId,
-            MealId = dto.MealId,
-            Datum = dto.Datum.ToUniversalTime(),
-            Maaltijdtype = dto.Maaltijdtype
-        };
-        _db.PlannedMeals.Add(planned);
+            planned = new PlannedMeal
+            {
+                UserId = userId,
+                Datum = plannedDate,
+                Maaltijdtype = dto.Maaltijdtype
+            };
+            _db.PlannedMeals.Add(planned);
+        }
+
+        planned.MealId = dto.MealId;
         await _db.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(GetMyPlan), new PlannedMealDto(
+        return Ok(new PlannedMealDto(
             planned.Id, planned.UserId, planned.MealId,
             meal.Naam, meal.AfbeeldingUrl, planned.Datum, planned.Maaltijdtype));
     }
