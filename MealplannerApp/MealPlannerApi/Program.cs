@@ -11,8 +11,7 @@ EnvFile.Load(Path.Combine(Directory.GetCurrentDirectory(), ".env"));
 var builder = WebApplication.CreateBuilder(args);
 
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection is not configured.");
+var connectionString = ConnectionStringResolver.ResolveMySqlConnectionString(builder.Configuration);
 var mySqlServerVersion = builder.Configuration["MySql:ServerVersion"] ?? "8.0.36";
 builder.Services.AddDbContext<MealPlannerDbContext>(options =>
     options.UseMySql(connectionString, ServerVersion.Parse(mySqlServerVersion)));
@@ -30,6 +29,9 @@ if (Encoding.UTF8.GetByteCount(jwtKey) < 32)
     throw new InvalidOperationException("Jwt:Key must be at least 32 bytes for HMAC SHA-256.");
 }
 
+// Threat ID: TM-02
+// Mitigatie tegen unauthorized API access: JWT-tokens worden gevalideerd op
+// issuer, audience, lifetime en signing key.
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -45,7 +47,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ClockSkew = TimeSpan.FromMinutes(2)
         };
     });
-
+// Threat ID: TM-09
+// Mitigatie tegen cross-origin blootstelling van protected API responses:
+// alleen toegestane frontend-origins krijgen toegang via CORS.
 builder.Services.AddAuthorization();
 
 // CORS for the Vite frontend.
