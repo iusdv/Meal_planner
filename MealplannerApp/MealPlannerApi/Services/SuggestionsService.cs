@@ -5,9 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MealPlannerApi.Services;
 
-/// <summary>
-/// Enriches AI requests with the user's profile and goal before calling Gemini.
-/// </summary>
+
 public class SuggestionsService
 {
     private readonly MealPlannerDbContext _db;
@@ -23,6 +21,7 @@ public class SuggestionsService
 
     public async Task<string> GetSuggestionAsync(int userId, string userQuestion)
     {
+        //TODO prompt moet wat duidelijker en gedeitailleerder
         var profile = await _db.Profiles.FirstOrDefaultAsync(profile => profile.UserId == userId);
         var goal = await _db.Goals.FirstOrDefaultAsync(goal => goal.UserId == userId);
 

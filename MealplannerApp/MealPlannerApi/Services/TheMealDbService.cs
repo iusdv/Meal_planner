@@ -44,6 +44,7 @@ public class TheMealDbService
         int minimumCatalogSize = DefaultMinimumCatalogSize,
         CancellationToken cancellationToken = default)
     {
+        // Stop import als min items er in staat.
         var currentMealCount = await _db.Meals.CountAsync(cancellationToken);
         if (currentMealCount >= minimumCatalogSize)
         {
@@ -99,6 +100,7 @@ public class TheMealDbService
                     DieetLabels = BuildDietLabels(category.DietLabels, detail)
                 };
 
+                // Hergebruik ingredienten binnen deze import-run om dubbele inserts te beperken.
                 foreach (var mealIngredient in detail.Ingredients
                     .DistinctBy(ingredient => ingredient.Name, StringComparer.OrdinalIgnoreCase)
                     .Take(12))
@@ -135,9 +137,12 @@ public class TheMealDbService
         await _db.SaveChangesAsync(cancellationToken);
     }
 
-//TODO change to put meal in database instead of contantly making api calls
+//TODO anapassen enrich details van TheMealDB alleen als er een externe id is en velden nog niet compleet zijn.
+//TODO translate output van TheMealDB naar NL 
+//TODO Cronjob voor data verversen en updaten van bestaande items.
     public async Task<bool> EnrichMealDetailsAsync(Meal meal, CancellationToken cancellationToken = default)
     {
+      
         if (string.IsNullOrWhiteSpace(meal.ExternalMealDbId))
         {
             return false;
@@ -181,6 +186,7 @@ public class TheMealDbService
 
     private async Task<IReadOnlyList<MealSummary>> GetMealSummariesAsync(string category, CancellationToken cancellationToken)
     {
+        // Haal een compacte lijst op per categorie via TheMealDB filter-endpoint.
         using var response = await _httpClient.GetAsync($"filter.php?c={Uri.EscapeDataString(category)}", cancellationToken);
         response.EnsureSuccessStatusCode();
 
@@ -209,6 +215,7 @@ public class TheMealDbService
 
     private async Task<MealDetail?> GetMealDetailAsync(string id, CancellationToken cancellationToken)
     {
+        // Haal volledige receptdetails op voor een specifieke maaltijd-id.
         using var response = await _httpClient.GetAsync($"lookup.php?i={Uri.EscapeDataString(id)}", cancellationToken);
         response.EnsureSuccessStatusCode();
 
@@ -221,6 +228,7 @@ public class TheMealDbService
         {
             return null;
         }
+
 
         var mealElement = mealsElement[0];
         var ingredients = new List<MealIngredientDetail>();

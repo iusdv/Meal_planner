@@ -50,7 +50,9 @@ public class FoodDataCentralService
         _configuration = configuration;
         _logger = logger;
     }
-
+//TODO TRANSLATE output van FDC naar NL 
+//TODO sla FDC data in database op om api calls te verminderen en loading te versnellen.
+//TODO CRONJOB voor data verversen en updaten van bestaande items.
     public async Task<NutritionFactsDto?> BuildNutritionFactsAsync(Meal meal, CancellationToken cancellationToken = default)
     {
         await EnsureNutrientCatalogAsync(cancellationToken);
