@@ -425,7 +425,7 @@ export default function OnboardingWizard({
                       </div>
                     </div>
                   )}
-
+                  {/* TODO layout verticaal maken gebruiker leest van boven naar beneden verticale layout is aantrekkelijker. */} 
                   {huidigeStap.key === 'ritme' && (
                     <div className="grid gap-6 xl:grid-cols-[240px_minmax(0,1fr)]">
                       <div className="h-fit rounded-[24px] border border-green-100 bg-[#f8fcf9] p-5">

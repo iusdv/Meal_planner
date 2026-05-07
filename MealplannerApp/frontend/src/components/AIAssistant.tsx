@@ -9,7 +9,7 @@ interface Message {
 interface Props {
   onClose: () => void;
 }
-
+//TODO verbeteren van boundaries en regels van gemini ai, antwoorden werken nog niet en zijn veelste lang
 export default function AIAssistant({ onClose }: Props) {
   const [messages, setMessages] = useState<Message[]>([
     { role: 'ai', text: 'Hallo! Ik ben jouw persoonlijke voedingscoach 🥗. Stel me een vraag over maaltijden, voeding of jouw doelen!' }

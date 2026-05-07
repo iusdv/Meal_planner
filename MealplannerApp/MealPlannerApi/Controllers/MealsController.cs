@@ -35,7 +35,9 @@ public class MealsController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> GetAll()
     {
+        // Vul de items aan als er te weinig zijn.
         var mealCount = await _db.Meals.CountAsync();
+        //TODO pagination toevoegen en alleen aanvullen bij teweinig maaltijden in de database. ipv alles inladen 
         if (mealCount < 120)
         {
             try
@@ -60,8 +62,10 @@ public class MealsController : ControllerBase
 
     [HttpGet("{id}")]
     [AllowAnonymous]
+    // Haal maaltijd met ingredienten en voedingswaarden op.
     public async Task<IActionResult> GetById(int id)
     {
+        
         var meal = await _db.Meals
             .Include(m => m.MealIngredients)
                 .ThenInclude(mi => mi.Ingredient)
@@ -72,7 +76,7 @@ public class MealsController : ControllerBase
         {
             try
             {
-                //TODO change to put meal in database instead of contantly making api calls
+             // TODO enrich slow loading details van TheMealDB alleen als er een externe id is en velden nog niet compleet zijn.   
                 if (await _theMealDbService.EnrichMealDetailsAsync(meal))
                 {
                     await _db.SaveChangesAsync();
@@ -92,7 +96,8 @@ public class MealsController : ControllerBase
         NutritionFactsDto? nutritionFacts = null;
         try
         {
-            //TODO PUT FOOD DATA CENTRAL IN DATABASE INSTEAD OF CONSTANTLY MAKING API CALLS
+            // Bouw uitgebreide voedingslabels op basis van ingredientmapping.
+            //TODO opslaan naar database word niet aangepast
             nutritionFacts = await _foodDataCentralService.BuildNutritionFactsAsync(meal);
         }
         catch (Exception ex)
