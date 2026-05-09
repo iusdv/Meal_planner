@@ -5,6 +5,7 @@ import type { GoalDto, MealDto, ProfileDto } from '../types';
 import {
   ACTIVITEITSNIVEAUS,
   buildMealSlotsFromCounts,
+  createMealSlot,
   DIEETOPTIES,
   DOELTYPES,
   distributeCaloriesAcrossMoments,
@@ -85,6 +86,25 @@ function normalizeMealSelection(selected: string[], count: number) {
   return buildMealSlotsFromCounts(nextCounts).slice(0, boundedCount);
 }
 
+function buildSlotsFromCategorySequence(categories: MealCategory[]) {
+  const counts: Record<MealCategory, number> = {
+    Ontbijt: 0,
+    Lunch: 0,
+    Diner: 0,
+    Snack: 0,
+  };
+
+  return categories.map((category) => {
+    counts[category] += 1;
+    return createMealSlot(category, counts[category]);
+  });
+}
+
+function getDefaultCategoryForIndex(index: number): MealCategory {
+  const defaults: MealCategory[] = ['Ontbijt', 'Lunch', 'Diner', 'Snack', 'Lunch', 'Diner'];
+  return defaults[index] ?? 'Snack';
+}
+
 function truncateText(value: string, maxLength: number) {
   if (value.length <= maxLength) return value;
   return `${value.slice(0, Math.max(0, maxLength - 3)).trimEnd()}...`;
@@ -127,7 +147,6 @@ export default function OnboardingWizard({
     () => ({ ...profiel, gewensteMaaltijden: geselecteerdeMaaltijden.join(',') }),
     [geselecteerdeMaaltijden, profiel]
   );
-  const mealCategoryCounts = useMemo(() => getMealCategoryCounts(geselecteerdeMaaltijden), [geselecteerdeMaaltijden]);
   const kcalPerMoment = useMemo(
     () => distributeCaloriesAcrossMoments(doel.caloriedoel, geselecteerdeMaaltijden),
     [doel.caloriedoel, geselecteerdeMaaltijden]
@@ -155,7 +174,13 @@ export default function OnboardingWizard({
     setProfiel((current) => ({ ...current, [key]: value }));
 
   const setMealCount = (count: number) => {
-    const next = normalizeMealSelection(geselecteerdeMaaltijden, count);
+    const currentCategories = geselecteerdeMaaltijden.map(getMealMomentCategory);
+    const nextCategories = Array.from(
+      { length: count },
+      (_, index) => currentCategories[index] ?? getDefaultCategoryForIndex(index)
+    );
+    const next = buildSlotsFromCategorySequence(nextCategories);
+
     setGeselecteerdeMaaltijden(next);
     setProfiel((current) => ({
       ...current,
@@ -171,21 +196,10 @@ export default function OnboardingWizard({
     updateProfiel('allergieen', Array.from(values).join(', '));
   };
 
-  const updateMealCategoryCount = (category: MealCategory, delta: number) => {
-    const currentCount = mealCategoryCounts[category];
-    const nextCount = Math.max(0, currentCount + delta);
-    const totalWithoutCurrent = geselecteerdeMaaltijden.length - currentCount;
-
-    if (totalWithoutCurrent + nextCount > profiel.maaltijdenPerDag) {
-      setFout(`Je kunt maximaal ${profiel.maaltijdenPerDag} eetmomenten verdelen.`);
-      return;
-    }
-
-    const nextSlots = buildMealSlotsFromCounts({
-      ...mealCategoryCounts,
-      [category]: nextCount,
-    });
-
+  const updateMealSlotCategory = (index: number, category: MealCategory) => {
+    const nextCategories = geselecteerdeMaaltijden.map(getMealMomentCategory);
+    nextCategories[index] = category;
+    const nextSlots = buildSlotsFromCategorySequence(nextCategories);
     setFout('');
     setGeselecteerdeMaaltijden(nextSlots);
     updateProfiel('gewensteMaaltijden', nextSlots.join(','));
@@ -425,48 +439,64 @@ export default function OnboardingWizard({
                       </div>
                     </div>
                   )}
-                  {/* TODO layout verticaal maken gebruiker leest van boven naar beneden verticale layout is aantrekkelijker. */} 
                   {huidigeStap.key === 'ritme' && (
-                    <div className="grid gap-6 xl:grid-cols-[240px_minmax(0,1fr)]">
-                      <div className="h-fit rounded-[24px] border border-green-100 bg-[#f8fcf9] p-5">
-                        <Title>Hoeveel eetmomenten?</Title>
-                        <p className="mt-2 text-sm leading-6 text-slate-600">Kies simpelweg hoeveel momenten je op een dag wilt plannen.</p>
-                        <select
-                          value={profiel.maaltijdenPerDag}
-                          onChange={(event) => setMealCount(Number(event.target.value))}
-                          className="mt-4 w-full rounded-2xl border border-green-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 focus:border-green-500 focus:outline-none"
-                        >
-                          {EETMOMENT_AANTALLEN.map((count) => (
-                            <option key={count} value={count}>
-                              {count} {count === 1 ? '' : ''} per dag
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <Title>Welke momenten wil je plannen?</Title>
-                        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-                          Verdeel je {profiel.maaltijdenPerDag} eetmomenten over ontbijt, lunch, diner en snack.
-                          Je kunt dezelfde categorie meerdere keren kiezen, zoals 2x ontbijt of 2x diner.
-                        </p>
-                        <div className="mt-4 space-y-3">
-                          {MAALTIJDCATEGORIEEN.map((item) => (
-                            <MealCategoryCard
-                              key={item}
-                              category={item}
-                              count={mealCategoryCounts[item]}
-                              maxTotal={profiel.maaltijdenPerDag}
-                              selectedTotal={geselecteerdeMaaltijden.length}
-                              description={getMealMomentDescription(item)}
-                              onDecrease={() => updateMealCategoryCount(item, -1)}
-                              onIncrease={() => updateMealCategoryCount(item, 1)}
-                            />
-                          ))}
+                    <div className="mx-auto max-w-3xl">
+                      <div className="border-b border-green-100 pb-6">
+                        <div>
+                          <Title>Hoeveel eetmomenten wil je plannen?</Title>
+                          <p className="mt-2 max-w-xl text-sm leading-6 text-slate-600">
+                            Kies het aantal momenten per dag. Daarna geef je elk moment simpelweg een type.
+                          </p>
                         </div>
-                        <div className="mt-4 text-sm text-slate-500">
-                          {geselecteerdeMaaltijden.length === profiel.maaltijdenPerDag
-                            ? 'Je verdeling is compleet.'
-                            : `Nog ${profiel.maaltijdenPerDag - geselecteerdeMaaltijden.length} eetmoment(en) te verdelen.`}
+                        <label className="mt-4 block max-w-xs">
+                          <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-green-700">Per dag</span>
+                          <select
+                            value={profiel.maaltijdenPerDag}
+                            onChange={(event) => setMealCount(Number(event.target.value))}
+                            className="w-full rounded-2xl border border-green-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 focus:border-green-500 focus:outline-none"
+                          >
+                            {EETMOMENT_AANTALLEN.map((count) => (
+                              <option key={count} value={count}>
+                                {count} eetmoment{count === 1 ? '' : 'en'}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+
+                      <div className="pt-6">
+                        <Title>Welke momenten zijn dat?</Title>
+                        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+                          Wil je bijvoorbeeld twee keer ontbijten of twee keer dineren? Kies dan hetzelfde type meerdere keren.
+                        </p>
+                        <div className="mt-4 divide-y divide-green-100 rounded-[24px] border border-green-100 bg-[#fbfefb]">
+                          {geselecteerdeMaaltijden.map((moment, index) => {
+                            const category = getMealMomentCategory(moment);
+
+                            return (
+                              <div key={`${moment}-${index}`} className="px-4 py-4">
+                                <div className="text-sm font-semibold text-green-700">Moment {index + 1}</div>
+                                <div>
+                                  <div className="font-semibold text-slate-900">{getMealMomentDisplayName(moment, geselecteerdeMaaltijden)}</div>
+                                  <div className="mt-1 text-sm text-slate-500">{getMealMomentDescription(moment)}</div>
+                                </div>
+                                <select
+                                  value={category}
+                                  onChange={(event) => updateMealSlotCategory(index, event.target.value as MealCategory)}
+                                  className="mt-3 w-full max-w-xs rounded-2xl border border-green-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 focus:border-green-500 focus:outline-none"
+                                >
+                                  {MAALTIJDCATEGORIEEN.map((item) => (
+                                    <option key={item} value={item}>
+                                      {item}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="mt-4 rounded-2xl bg-green-50 px-4 py-3 text-sm text-green-800">
+                          Huidige verdeling: {summarizeMealSlots(geselecteerdeMaaltijden)}
                         </div>
                       </div>
                     </div>
@@ -666,59 +696,6 @@ function ChoiceCard({
       <div className="text-sm font-semibold text-slate-900">{title}</div>
       <div className="mt-1 text-sm leading-6 text-slate-600">{text}</div>
     </button>
-  );
-}
-
-function MealCategoryCard({
-  category,
-  count,
-  maxTotal,
-  selectedTotal,
-  description,
-  onDecrease,
-  onIncrease,
-}: {
-  category: MealCategory;
-  count: number;
-  maxTotal: number;
-  selectedTotal: number;
-  description: string;
-  onDecrease: () => void;
-  onIncrease: () => void;
-}) {
-  const increaseDisabled = selectedTotal >= maxTotal;
-  const decreaseDisabled = count <= 0;
-
-  return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-green-200 bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-3">
-          <div className="text-base font-semibold text-slate-900">{category}</div>
-          <div className="rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">{count}x</div>
-        </div>
-        <div className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{description}</div>
-      </div>
-
-      <div className="flex shrink-0 items-center gap-2 rounded-full border border-green-100 bg-[#f8fcf9] px-2 py-2">
-        <button
-          type="button"
-          disabled={decreaseDisabled}
-          onClick={onDecrease}
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-green-200 bg-white text-lg font-semibold text-green-700 disabled:opacity-35"
-        >
-          -
-        </button>
-        <div className="min-w-[48px] text-center text-lg font-semibold text-slate-900">{count}</div>
-        <button
-          type="button"
-          disabled={increaseDisabled}
-          onClick={onIncrease}
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-green-200 bg-white text-lg font-semibold text-green-700 disabled:opacity-35"
-        >
-          +
-        </button>
-      </div>
-    </div>
   );
 }
 

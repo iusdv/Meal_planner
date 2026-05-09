@@ -115,15 +115,15 @@ export function isSnackMoment(value: string) {
 export function getMealMomentDescription(value: string) {
   switch (getMealMomentCategory(value)) {
     case 'Ontbijt':
-      return 'Je eerste hoofdmaaltijd om de dag sterk te starten.';
+      return 'Ochtendmaaltijd.';
     case 'Lunch':
-      return 'Je middagmaaltijd voor focus en energie.';
+      return 'Middagmaaltijd.';
     case 'Diner':
-      return 'Je hoofdmaaltijd in de avond.';
+      return 'Avondmaaltijd.';
     case 'Snack':
-      return 'Een lichter tussendoortje naast je hoofdmaaltijden.';
+      return 'Tussendoortje.';
     default:
-      return 'Een extra eetmoment in je planning.';
+      return 'Extra eetmoment.';
   }
 }
 //TODO UNIT TESTS maken voor getMealMomentDescription en getMealMomentDisplayName
