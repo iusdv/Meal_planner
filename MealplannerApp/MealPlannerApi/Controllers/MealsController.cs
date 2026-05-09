@@ -15,43 +15,22 @@ namespace MealPlannerApi.Controllers;
 public class MealsController : ControllerBase
 {
     private readonly MealPlannerDbContext _db;
-    private readonly TheMealDbService _theMealDbService;
     private readonly FoodDataCentralService _foodDataCentralService;
-    private readonly ILogger<MealsController> _logger;
 
     public MealsController(
         MealPlannerDbContext db,
-        TheMealDbService theMealDbService,
-        FoodDataCentralService foodDataCentralService,
-        ILogger<MealsController> logger)
+        FoodDataCentralService foodDataCentralService)
     {
         _db = db;
-        _theMealDbService = theMealDbService;
         _foodDataCentralService = foodDataCentralService;
-        _logger = logger;
     }
 
     [HttpGet]
     [AllowAnonymous]
     public async Task<IActionResult> GetAll()
     {
-        // Vul de items aan als er te weinig zijn.
-        var mealCount = await _db.Meals.CountAsync();
-        //TODO pagination toevoegen en alleen aanvullen bij teweinig maaltijden in de database. ipv alles inladen 
-        if (mealCount < 120)
-        {
-            try
-            {
-                await _theMealDbService.ImportStarterMealsAsync();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "TheMealDB import failed.");
-                return StatusCode(503, new { message = "Maaltijden konden niet worden opgehaald bij TheMealDB. Probeer het later opnieuw." });
-            }
-        }
-
         var meals = await _db.Meals
+            .AsNoTracking()
             .Include(m => m.MealIngredients)
                 .ThenInclude(mi => mi.Ingredient)
                     .ThenInclude(i => i.NutritionalValue)
@@ -65,45 +44,19 @@ public class MealsController : ControllerBase
     // Haal maaltijd met ingredienten en voedingswaarden op.
     public async Task<IActionResult> GetById(int id)
     {
-        
         var meal = await _db.Meals
+            .AsNoTracking()
             .Include(m => m.MealIngredients)
                 .ThenInclude(mi => mi.Ingredient)
                     .ThenInclude(i => i.NutritionalValue)
             .FirstOrDefaultAsync(m => m.Id == id);
-
-        if (meal != null)
-        {
-            try
-            {
-             // TODO enrich slow loading details van TheMealDB alleen als er een externe id is en velden nog niet compleet zijn.   
-                if (await _theMealDbService.EnrichMealDetailsAsync(meal))
-                {
-                    await _db.SaveChangesAsync();
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "TheMealDB detail enrichment failed for meal {MealId}. Returning stored meal data.", id);
-            }
-        }
 
         if (meal == null)
         {
             return NotFound();
         }
 
-        NutritionFactsDto? nutritionFacts = null;
-        try
-        {
-            // Bouw uitgebreide voedingslabels op basis van ingredientmapping.
-            //TODO opslaan naar database word niet aangepast
-            nutritionFacts = await _foodDataCentralService.BuildNutritionFactsAsync(meal);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Nutrition enrichment failed for meal {MealId}. Returning recipe without extended nutrition.", id);
-        }
+        var nutritionFacts = await _foodDataCentralService.BuildStoredNutritionFactsAsync(meal);
 
         return Ok(MapToDto(meal, nutritionFacts));
     }
