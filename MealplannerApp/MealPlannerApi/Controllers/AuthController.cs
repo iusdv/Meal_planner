@@ -42,7 +42,6 @@ public class AuthController : ControllerBase
         {
             Naam = dto.Naam,
             Email = dto.Email,
-            // BCrypt.HashPassword includes a random salt – plain text is never stored
             WachtwoordHash = BCrypt.Net.BCrypt.HashPassword(dto.Wachtwoord),
             Rol = "User"
         };

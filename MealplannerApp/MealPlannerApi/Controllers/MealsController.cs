@@ -32,7 +32,6 @@ public class MealsController : ControllerBase
     }
 
     [HttpGet]
-    [AllowAnonymous]
     public async Task<IActionResult> GetAll()
     {
         // Vul de items aan als er te weinig zijn.
@@ -61,7 +60,6 @@ public class MealsController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    [AllowAnonymous]
     // Haal maaltijd met ingredienten en voedingswaarden op.
     public async Task<IActionResult> GetById(int id)
     {
