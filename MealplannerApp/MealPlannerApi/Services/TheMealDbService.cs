@@ -137,9 +137,6 @@ public class TheMealDbService
         await _db.SaveChangesAsync(cancellationToken);
     }
 
-//TODO anapassen enrich details van TheMealDB alleen als er een externe id is en velden nog niet compleet zijn.
-//TODO translate output van TheMealDB naar NL 
-//TODO Cronjob voor data verversen en updaten van bestaande items.
     public async Task<bool> EnrichMealDetailsAsync(Meal meal, CancellationToken cancellationToken = default)
     {
       

@@ -84,6 +84,7 @@ builder.Services.AddHttpClient<FoodDataCentralService>(client =>
 });
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<SuggestionsService>();
+builder.Services.AddHostedService<MealDataRefreshService>();
 
 builder.Services.AddControllers();
 
