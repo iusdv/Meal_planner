@@ -24,11 +24,30 @@ public class FoodDataCentralService
         {
             ["aubergine"] = "eggplant",
             ["courgette"] = "zucchini",
+            ["egg"] = "egg whole raw fresh",
+            ["eggs"] = "egg whole raw fresh",
             ["spring onion"] = "green onion",
             ["spring onions"] = "green onions",
-            ["caster sugar"] = "sugar",
-            ["plain flour"] = "wheat flour",
-            ["self-raising flour"] = "wheat flour",
+            ["caster sugar"] = "sugar granulated",
+            ["granulated sugar"] = "sugar granulated",
+            ["icing sugar"] = "powdered sugar",
+            ["vanilla sugar"] = "sugar granulated",
+            ["flour"] = "wheat flour white all purpose",
+            ["plain flour"] = "wheat flour white all purpose",
+            ["self-raising flour"] = "wheat flour white all purpose",
+            ["buckwheat flour"] = "buckwheat flour",
+            ["salt"] = "salt table",
+            ["sea salt"] = "salt table",
+            ["pepper"] = "black pepper",
+            ["black pepper"] = "black pepper",
+            ["milk"] = "milk whole",
+            ["butter"] = "butter salted",
+            ["unsalted butter"] = "butter without salt",
+            ["vegetable oil"] = "vegetable oil",
+            ["olive oil"] = "olive oil",
+            ["extra virgin olive oil"] = "olive oil",
+            ["red onions"] = "onions red raw",
+            ["red onion"] = "onions red raw",
             ["minced beef"] = "ground beef",
             ["double cream"] = "cream",
             ["single cream"] = "cream",
@@ -37,6 +56,31 @@ public class FoodDataCentralService
             ["red chilli"] = "chili pepper",
             ["green chilli"] = "chili pepper",
             ["bell pepper"] = "sweet pepper"
+        };
+
+    private static readonly IReadOnlyDictionary<string, IngredientMatchRule> IngredientMatchRules =
+        new Dictionary<string, IngredientMatchRule>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["salt"] = new(["salt"], ["butter", "sauce", "snack", "seasoning mix"]),
+            ["sea salt"] = new(["salt"], ["butter", "sauce", "snack", "seasoning mix"]),
+            ["pepper"] = new(["pepper"], ["steak", "sauce", "soup", "prepared"]),
+            ["black pepper"] = new(["pepper"], ["steak", "sauce", "soup", "prepared"]),
+            ["milk"] = new(["milk"], ["cracker", "chocolate", "dessert", "shake", "beverage powder"]),
+            ["butter"] = new(["butter"], ["ghee", "oil", "spread"]),
+            ["unsalted butter"] = new(["butter"], ["ghee", "oil", "spread"]),
+            ["flour"] = new(["flour"], ["mix", "bread", "tortilla", "cracker"]),
+            ["plain flour"] = new(["flour"], ["mix", "bread", "tortilla", "cracker"]),
+            ["buckwheat flour"] = new(["buckwheat", "flour"], ["mix", "pancake"]),
+            ["sugar"] = new(["sugar"], ["substitute", "blend", "free", "ice cream", "cookie"]),
+            ["granulated sugar"] = new(["sugar"], ["substitute", "blend", "free", "ice cream", "cookie"]),
+            ["caster sugar"] = new(["sugar"], ["substitute", "blend", "free", "ice cream", "cookie"]),
+            ["vanilla sugar"] = new(["sugar"], ["substitute", "blend", "free", "ice cream", "cookie"]),
+            ["icing sugar"] = new(["sugar"], ["substitute", "blend", "free", "ice cream", "cookie"]),
+            ["vegetable oil"] = new(["oil"], ["palm kernel", "shortening", "dressing"]),
+            ["olive oil"] = new(["olive", "oil"], ["dressing", "spread"]),
+            ["extra virgin olive oil"] = new(["olive", "oil"], ["dressing", "spread"]),
+            ["red onion"] = new(["onion"], ["soup", "rings", "powder"]),
+            ["red onions"] = new(["onion"], ["soup", "rings", "powder"])
         };
 
     public FoodDataCentralService(
@@ -50,9 +94,72 @@ public class FoodDataCentralService
         _configuration = configuration;
         _logger = logger;
     }
-//TODO TRANSLATE output van FDC naar NL 
-//TODO sla FDC data in database op om api calls te verminderen en loading te versnellen.
-//TODO CRONJOB voor data verversen en updaten van bestaande items.
+    public async Task<NutritionFactsDto?> BuildStoredNutritionFactsAsync(Meal meal, CancellationToken cancellationToken = default)
+    {
+        var definitionsByKey = await GetDefinitionLookupAsync(cancellationToken);
+        var totals = new Dictionary<string, NutrientTotal>(StringComparer.OrdinalIgnoreCase);
+        var totalGrams = 0d;
+        var matchedIngredients = 0;
+        var estimated = false;
+        var consideredIngredients = meal.MealIngredients.Take(20).ToList();
+
+        foreach (var mealIngredient in consideredIngredients)
+        {
+            var grams = EstimateGrams(
+                mealIngredient.OrigineleHoeveelheid,
+                mealIngredient.Hoeveelheid,
+                mealIngredient.Ingredient.Naam);
+
+            if (grams <= 0)
+            {
+                continue;
+            }
+
+            totalGrams += grams;
+            var nutrients = await GetStoredIngredientNutrientsAsync(
+                mealIngredient.IngredientId,
+                cancellationToken);
+
+            if (nutrients.Count == 0)
+            {
+                AddStoredMacroFallback(totals, definitionsByKey, mealIngredient, grams);
+                estimated = true;
+                continue;
+            }
+
+            matchedIngredients++;
+            estimated = estimated || nutrients.Any(nutrient => nutrient.IsEstimated);
+
+            foreach (var nutrient in nutrients)
+            {
+                AddTotal(totals, nutrient.Definition, nutrient.ValuePer100g * grams / 100);
+            }
+        }
+
+        AddDerivedRows(totals, definitionsByKey);
+
+        if (totals.Count == 0)
+        {
+            return null;
+        }
+
+        var sections = BuildSections(totals);
+        var source = matchedIngredients > 0
+            ? "Voedingscache uit database"
+            : "Schattingen uit database";
+
+        if (matchedIngredients > 0 && (estimated || matchedIngredients < consideredIngredients.Count))
+        {
+            source += " + schattingen";
+        }
+
+        return new NutritionFactsDto(
+            Math.Round(totalGrams, 1),
+            estimated || matchedIngredients < consideredIngredients.Count,
+            source,
+            sections);
+    }
+
     public async Task<NutritionFactsDto?> BuildNutritionFactsAsync(Meal meal, CancellationToken cancellationToken = default)
     {
         await EnsureNutrientCatalogAsync(cancellationToken);
@@ -110,11 +217,11 @@ public class FoodDataCentralService
         var sections = BuildSections(totals);
         var source = matchedIngredients > 0
             ? NutritionCatalog.FoodDataCentralSource
-            : "Database estimates";
+            : "Schattingen uit database";
 
         if (matchedIngredients > 0 && (estimated || matchedIngredients < consideredIngredients.Count))
         {
-            source += " + estimates";
+            source += " + schattingen";
         }
 
         return new NutritionFactsDto(
@@ -137,15 +244,24 @@ public class FoodDataCentralService
                 item.Source == NutritionCatalog.FoodDataCentralSource,
                 cancellationToken);
 
-        if (mapping is { NutrientValues.Count: > 0 })
+        var searchTerm = BuildSearchTerm(ingredient.Naam);
+        var matchRule = BuildMatchRule(ingredient.Naam, searchTerm);
+
+        if (mapping is { NutrientValues.Count: > 0 } &&
+            IsAcceptableDescription(mapping.ExternalFoodDescription, matchRule))
         {
             return mapping.NutrientValues
                 .Select(value => new IngredientNutrientResult(value.NutrientDefinition, value.ValuePer100g, value.IsEstimated))
                 .ToList();
         }
 
-        var searchTerm = BuildSearchTerm(ingredient.Naam);
-        var food = await SearchFoodAsync(searchTerm, cancellationToken);
+        if (mapping is { NutrientValues.Count: > 0 })
+        {
+            _db.IngredientNutrientValues.RemoveRange(mapping.NutrientValues);
+            mapping.NutrientValues.Clear();
+        }
+
+        var food = await SearchFoodAsync(searchTerm, matchRule, cancellationToken);
         if (food.TransientFailure)
         {
             return [];
@@ -213,6 +329,60 @@ public class FoodDataCentralService
         return createdValues.Values.ToList();
     }
 
+    private async Task<IReadOnlyDictionary<string, NutrientDefinition>> GetDefinitionLookupAsync(CancellationToken cancellationToken)
+    {
+        var definitions = await _db.NutrientDefinitions
+            .AsNoTracking()
+            .ToDictionaryAsync(definition => definition.Key, cancellationToken);
+
+        foreach (var item in NutritionCatalog.Definitions)
+        {
+            if (definitions.ContainsKey(item.Key))
+            {
+                continue;
+            }
+
+            definitions[item.Key] = new NutrientDefinition
+            {
+                Key = item.Key,
+                Label = item.Label,
+                Section = item.Section,
+                Unit = item.Unit,
+                DailyValue = item.DailyValue,
+                Highlight = item.Highlight,
+                DisplayOrder = item.DisplayOrder
+            };
+        }
+
+        return definitions;
+    }
+
+    private async Task<IReadOnlyList<IngredientNutrientResult>> GetStoredIngredientNutrientsAsync(
+        int ingredientId,
+        CancellationToken cancellationToken)
+    {
+        var mapping = await _db.IngredientNutritionMappings
+            .AsNoTracking()
+            .Include(item => item.NutrientValues)
+                .ThenInclude(value => value.NutrientDefinition)
+            .FirstOrDefaultAsync(item =>
+                item.IngredientId == ingredientId &&
+                item.Source == NutritionCatalog.FoodDataCentralSource,
+                cancellationToken);
+
+        if (mapping is not { NutrientValues.Count: > 0 })
+        {
+            return [];
+        }
+
+        return mapping.NutrientValues
+            .Select(value => new IngredientNutrientResult(
+                value.NutrientDefinition,
+                value.ValuePer100g,
+                value.IsEstimated))
+            .ToList();
+    }
+
     private async Task EnsureNutrientCatalogAsync(CancellationToken cancellationToken)
     {
         var definitions = await _db.NutrientDefinitions
@@ -273,7 +443,10 @@ public class FoodDataCentralService
         }
     }
 
-    private async Task<FdcSearchOutcome> SearchFoodAsync(string searchTerm, CancellationToken cancellationToken)
+    private async Task<FdcSearchOutcome> SearchFoodAsync(
+        string searchTerm,
+        IngredientMatchRule matchRule,
+        CancellationToken cancellationToken)
     {
         var apiKey = _configuration["FoodDataCentral:ApiKey"];
         if (string.IsNullOrWhiteSpace(apiKey))
@@ -284,7 +457,7 @@ public class FoodDataCentralService
         var payload = new
         {
             query = searchTerm,
-            pageSize = 5,
+            pageSize = 25,
             dataType = new[] { "Foundation", "SR Legacy", "Survey (FNDDS)" }
         };
 
@@ -304,7 +477,7 @@ public class FoodDataCentralService
 
             await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
             var result = await JsonSerializer.DeserializeAsync<FdcSearchResponse>(stream, JsonOptions, cancellationToken);
-            return new FdcSearchOutcome(PickBestFood(result?.Foods ?? [], searchTerm), false);
+            return new FdcSearchOutcome(PickBestFood(result?.Foods ?? [], searchTerm, matchRule), false);
         }
         catch (Exception ex)
         {
@@ -313,7 +486,10 @@ public class FoodDataCentralService
         }
     }
 
-    private static FdcFood? PickBestFood(IReadOnlyList<FdcFood> foods, string searchTerm)
+    private static FdcFood? PickBestFood(
+        IReadOnlyList<FdcFood> foods,
+        string searchTerm,
+        IngredientMatchRule matchRule)
     {
         if (foods.Count == 0)
         {
@@ -322,8 +498,10 @@ public class FoodDataCentralService
 
         var normalized = NormalizeSearchText(searchTerm);
         return foods
+            .Where(food => IsAcceptableFood(food, matchRule))
             .OrderBy(food => DataTypeRank(food.DataType))
-            .ThenByDescending(food => NormalizeSearchText(food.Description).Contains(normalized) ? 1 : 0)
+            .ThenByDescending(food => GetExactMatchScore(food.Description, normalized))
+            .ThenByDescending(food => GetKeywordMatchScore(food.Description, matchRule.RequiredTerms))
             .ThenByDescending(food => food.Score ?? 0)
             .FirstOrDefault();
     }
@@ -343,6 +521,80 @@ public class FoodDataCentralService
         return IngredientAliases.TryGetValue(normalized, out var alias)
             ? alias
             : normalized;
+    }
+
+    private static IngredientMatchRule BuildMatchRule(string ingredientName, string searchTerm)
+    {
+        var normalizedIngredient = NormalizeSearchText(ingredientName);
+        if (IngredientMatchRules.TryGetValue(normalizedIngredient, out var exactRule))
+        {
+            return exactRule;
+        }
+
+        var requiredTerms = NormalizeSearchText(searchTerm)
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Where(term => term.Length > 2)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        return new IngredientMatchRule(requiredTerms, []);
+    }
+
+    private static bool IsAcceptableFood(FdcFood food, IngredientMatchRule matchRule) =>
+        IsAcceptableDescription(food.Description, matchRule);
+
+    private static bool IsAcceptableDescription(string? description, IngredientMatchRule matchRule)
+    {
+        var normalizedDescription = NormalizeSearchText(description);
+        if (string.IsNullOrWhiteSpace(normalizedDescription))
+        {
+            return false;
+        }
+
+        if (matchRule.RejectedTerms.Any(term => ContainsNormalizedPhrase(normalizedDescription, term)))
+        {
+            return false;
+        }
+
+        return matchRule.RequiredTerms.Count == 0 ||
+            matchRule.RequiredTerms.All(term => ContainsNormalizedPhrase(normalizedDescription, term));
+    }
+
+    private static int GetExactMatchScore(string? description, string normalizedSearchTerm)
+    {
+        var normalizedDescription = NormalizeSearchText(description);
+        if (normalizedDescription.Equals(normalizedSearchTerm, StringComparison.OrdinalIgnoreCase))
+        {
+            return 4;
+        }
+
+        if (normalizedDescription.StartsWith(normalizedSearchTerm + " ", StringComparison.OrdinalIgnoreCase))
+        {
+            return 3;
+        }
+
+        if (ContainsNormalizedPhrase(normalizedDescription, normalizedSearchTerm))
+        {
+            return 2;
+        }
+
+        return 0;
+    }
+
+    private static int GetKeywordMatchScore(string? description, IReadOnlyList<string> keywords)
+    {
+        var normalizedDescription = NormalizeSearchText(description);
+        return keywords.Count(keyword => ContainsNormalizedPhrase(normalizedDescription, keyword));
+    }
+
+    private static bool ContainsNormalizedPhrase(string normalizedText, string phrase)
+    {
+        var normalizedPhrase = NormalizeSearchText(phrase);
+        return !string.IsNullOrWhiteSpace(normalizedPhrase) &&
+            Regex.IsMatch(
+                normalizedText,
+                $@"(?:^|\s){Regex.Escape(normalizedPhrase)}(?:\s|$)",
+                RegexOptions.IgnoreCase);
     }
 
     private static string NormalizeSearchText(string? value)
@@ -685,6 +937,10 @@ public class FoodDataCentralService
     }
 
     private sealed record IngredientNutrientResult(NutrientDefinition Definition, double ValuePer100g, bool IsEstimated);
+
+    private sealed record IngredientMatchRule(
+        IReadOnlyList<string> RequiredTerms,
+        IReadOnlyList<string> RejectedTerms);
 
     private sealed class NutrientTotal
     {
