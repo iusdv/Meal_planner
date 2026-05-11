@@ -1,5 +1,7 @@
 namespace MealPlannerApi.DTOs;
 
+public record PaginatedResultDto<T>(List<T> Items, int Page, int PageSize, int TotalItems, int TotalPages);
+
 // Auth DTOs
 public record RegisterDto(string Naam, string Email, string Wachtwoord);
 public record LoginDto(string Email, string Wachtwoord);

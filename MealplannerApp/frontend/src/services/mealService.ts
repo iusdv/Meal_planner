@@ -2,6 +2,7 @@ import api from './api';
 import type {
   AuthResponseDto,
   MealDto,
+  PaginatedResultDto,
   PlannedMealDto,
   FavoriteDto,
   ProfileDto,
@@ -17,13 +18,26 @@ export const login = (email: string, wachtwoord: string) =>
 
 // Meals
 export const getMeals = () => api.get<MealDto[]>('/meals');
+export const getPagedMeals = (params: {
+  page: number;
+  pageSize: number;
+  category?: string;
+  search?: string;
+  excludeMealId?: number | null;
+}) => api.get<PaginatedResultDto<MealDto>>('/meals/paged', { params });
+export const getPlannerMeals = (categories: string[], perCategory = 18) =>
+  api.get<MealDto[]>('/meals/planner-candidates', {
+    params: {
+      categories: categories.join(','),
+      perCategory,
+    },
+  });
 export const getMeal = (id: number) => api.get<MealDto>(`/meals/${id}`);
 
 // Planned meals
 export const getPlannedMeals = () => api.get<PlannedMealDto[]>('/plannedmeals');
 export const addPlannedMeal = (mealId: number, datum: string, maaltijdtype: string) =>
   api.post<PlannedMealDto>('/plannedmeals', { mealId, datum, maaltijdtype });
-export const removePlannedMeal = (id: number) => api.delete(`/plannedmeals/${id}`);
 
 // Favorites
 export const getFavorites = () => api.get<FavoriteDto[]>('/favorites');
