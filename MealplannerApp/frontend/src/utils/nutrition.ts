@@ -16,6 +16,16 @@ export const DOELTYPES = ['Afvallen', 'Balans', 'Spiermassa opbouwen', 'Gezonder
 export const HOOFDMAALTIJDMOMENTEN = ['Ontbijt', 'Lunch', 'Diner'] as const;
 export const MAALTIJDCATEGORIEEN = ['Ontbijt', 'Lunch', 'Diner', 'Snack'] as const;
 export const STANDAARD_MAALTIJDMOMENTEN = ['Ontbijt 1', 'Lunch 1', 'Diner 1'] as const;
+export const MACRO_COLORS = {
+  protein: '#22c55e',
+  fat: '#f59e0b',
+  carbs: '#2563eb',
+} as const;
+export const MACRO_LABELS_NL = {
+  protein: 'Eiwit',
+  fat: 'Vet',
+  carbs: 'Koolhydraten',
+} as const;
 
 export type MealCategory = (typeof MAALTIJDCATEGORIEEN)[number];
 
