@@ -25,6 +25,7 @@ public class AuthController : ControllerBase
     /// before storage. The hash is NEVER returned to the client (DTO excludes it).
     /// </summary>
     [HttpPost("register")]
+    // TODO: Rate limiting toevoegen om misbruik van registratiepogingen te beperken.
     public async Task<IActionResult> Register([FromBody] RegisterDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Naam) ||
@@ -42,7 +43,6 @@ public class AuthController : ControllerBase
         {
             Naam = dto.Naam,
             Email = dto.Email,
-            // BCrypt.HashPassword includes a random salt – plain text is never stored
             WachtwoordHash = BCrypt.Net.BCrypt.HashPassword(dto.Wachtwoord),
             Rol = "User"
         };
@@ -55,6 +55,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
+    // TODO: Rate limiting toevoegen om brute-force loginpogingen te beperken.
     public async Task<IActionResult> Login([FromBody] LoginDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Wachtwoord))

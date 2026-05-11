@@ -16,6 +16,16 @@ export const DOELTYPES = ['Afvallen', 'Balans', 'Spiermassa opbouwen', 'Gezonder
 export const HOOFDMAALTIJDMOMENTEN = ['Ontbijt', 'Lunch', 'Diner'] as const;
 export const MAALTIJDCATEGORIEEN = ['Ontbijt', 'Lunch', 'Diner', 'Snack'] as const;
 export const STANDAARD_MAALTIJDMOMENTEN = ['Ontbijt 1', 'Lunch 1', 'Diner 1'] as const;
+export const MACRO_COLORS = {
+  protein: '#22c55e',
+  fat: '#f59e0b',
+  carbs: '#2563eb',
+} as const;
+export const MACRO_LABELS_NL = {
+  protein: 'Eiwit',
+  fat: 'Vet',
+  carbs: 'Koolhydraten',
+} as const;
 
 export type MealCategory = (typeof MAALTIJDCATEGORIEEN)[number];
 
@@ -115,15 +125,15 @@ export function isSnackMoment(value: string) {
 export function getMealMomentDescription(value: string) {
   switch (getMealMomentCategory(value)) {
     case 'Ontbijt':
-      return 'Je eerste hoofdmaaltijd om de dag sterk te starten.';
+      return 'Ochtendmaaltijd.';
     case 'Lunch':
-      return 'Je middagmaaltijd voor focus en energie.';
+      return 'Middagmaaltijd.';
     case 'Diner':
-      return 'Je hoofdmaaltijd in de avond.';
+      return 'Avondmaaltijd.';
     case 'Snack':
-      return 'Een lichter tussendoortje naast je hoofdmaaltijden.';
+      return 'Tussendoortje.';
     default:
-      return 'Een extra eetmoment in je planning.';
+      return 'Extra eetmoment.';
   }
 }
 //TODO UNIT TESTS maken voor getMealMomentDescription en getMealMomentDisplayName

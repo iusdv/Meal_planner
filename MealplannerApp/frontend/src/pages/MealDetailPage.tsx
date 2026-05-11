@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import StatusToast from '../components/StatusToast';
 import { addFavorite, addPlannedMeal, getMeal } from '../services/mealService';
 import type { MealDto, NutritionFactRowDto, NutritionFactSectionDto } from '../types';
-import { calculateMealNutrition, macroPercentages, scaleMeasure } from '../utils/nutrition';
+import { calculateMealNutrition, macroPercentages, MACRO_COLORS, MACRO_LABELS_NL, scaleMeasure } from '../utils/nutrition';
 
 type InstructionItem =
   | { kind: 'heading'; text: string }
@@ -288,9 +288,9 @@ function MacroPie({ protein, carbs, fat, hasData }: { protein: number; carbs: nu
   }
 
   const slices = [
-    { key: 'fat', label: 'Fat', value: fat, color: '#12b6c7' },
-    { key: 'carbs', label: 'Carbs', value: carbs, color: '#f0bd05' },
-    { key: 'protein', label: 'Protein', value: protein, color: '#9667f2' },
+    { key: 'fat', label: MACRO_LABELS_NL.fat, value: fat, color: MACRO_COLORS.fat },
+    { key: 'carbs', label: 'Koolh.', value: carbs, color: MACRO_COLORS.carbs },
+    { key: 'protein', label: MACRO_LABELS_NL.protein, value: protein, color: MACRO_COLORS.protein },
   ];
 
   let startAngle = -90;
@@ -318,7 +318,7 @@ function MacroPie({ protein, carbs, fat, hasData }: { protein: number; carbs: nu
           );
         })}
       </svg>
-      <div className="mt-1 text-sm text-gray-900">Percent Calories</div>
+      <div className="mt-1 text-sm text-gray-900">Percentage calorieen</div>
     </div>
   );
 }

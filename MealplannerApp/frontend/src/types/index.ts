@@ -42,6 +42,14 @@ export interface MealDto {
   nutritionFacts?: NutritionFactsDto | null;
 }
 
+export interface PaginatedResultDto<T> {
+  items: T[];
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+}
+
 export interface NutritionFactsDto {
   servingGrams: number;
   estimated: boolean;

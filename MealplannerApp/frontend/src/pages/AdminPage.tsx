@@ -8,6 +8,7 @@ export default function AdminPage() {
   useAuth();
   const [meals, setMeals] = useState<MealDto[]>([]);
   const [loading, setLoading] = useState(true);
+  // TODO: Kleine maaltijdafbeeldingen toevoegen aan het adminoverzicht en eventueel een preview bij het formulier.
   const [newMeal, setNewMeal] = useState({ naam: '', beschrijving: '', categorie: 'Ontbijt', bereidingstijd: 30, afbeeldingUrl: '' });
   const [msg, setMsg] = useState('');
 
@@ -29,11 +30,14 @@ export default function AdminPage() {
   };
 
   const handleDelete = async (id: number) => {
+    // TODO: Vervang browser-confirm door een nette CRUD bevestigingspopup met duidelijke annuleren/verwijderen acties.
     if (!confirm('Maaltijd verwijderen?')) return;
     await api.delete(`/meals/${id}`);
     setMeals((prev) => prev.filter((m) => m.id !== id));
   };
 
+  // TODO: Frontend van deze adminpagina opschonen zodat spacing, knoppen, tabel en states beter aansluiten op de rest van de app.
+  // TODO: CRUD functionaliteit afmaken: edit-popup, detail-popup, betere create-flow, foutmeldingen en success-toasts.
   return (
     <div className="max-w-5xl mx-auto px-4 py-6">
       <div className="flex items-center gap-3 mb-6">
