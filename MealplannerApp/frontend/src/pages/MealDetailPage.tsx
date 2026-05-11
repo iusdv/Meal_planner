@@ -4,6 +4,11 @@ import StatusToast from '../components/StatusToast';
 import { addFavorite, addPlannedMeal, getMeal } from '../services/mealService';
 import type { MealDto, NutritionFactRowDto, NutritionFactSectionDto } from '../types';
 import { calculateMealNutrition, macroPercentages, MACRO_COLORS, MACRO_LABELS_NL, scaleMeasure } from '../utils/nutrition';
+import {
+  DASHBOARD_FLASH_STORAGE_KEY,
+  PLANNER_SWAP_STORAGE_KEY,
+  type PlannerSwapContext,
+} from '../utils/plannerSwap';
 
 type InstructionItem =
   | { kind: 'heading'; text: string }
@@ -20,6 +25,7 @@ export default function MealDetailPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [swapContext, setSwapContext] = useState<PlannerSwapContext | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -32,6 +38,17 @@ export default function MealDetailPage() {
       .catch(() => setError('Maaltijd kon niet worden geladen. Probeer het later opnieuw.'))
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    const rawContext = sessionStorage.getItem(PLANNER_SWAP_STORAGE_KEY);
+    if (!rawContext) return;
+
+    try {
+      setSwapContext(JSON.parse(rawContext) as PlannerSwapContext);
+    } catch {
+      sessionStorage.removeItem(PLANNER_SWAP_STORAGE_KEY);
+    }
+  }, []);
 
   const nutrition = useMemo(() => meal ? calculateMealNutrition(meal, servings) : null, [meal, servings]);
   const percentages = nutrition ? macroPercentages(nutrition) : { protein: 0, carbs: 0, fat: 0 };
@@ -73,6 +90,22 @@ export default function MealDetailPage() {
     setSaving(true);
     setError('');
     try {
+      if (swapContext) {
+        if (swapContext.currentMealId === meal.id) {
+          notifyError('Deze maaltijd staat al ingepland. Kies een andere maaltijd.');
+          return;
+        }
+
+        await Promise.all(swapContext.targets.map((target) => addPlannedMeal(meal.id, target.date, target.type)));
+        sessionStorage.removeItem(PLANNER_SWAP_STORAGE_KEY);
+        sessionStorage.setItem(
+          DASHBOARD_FLASH_STORAGE_KEY,
+          `"${meal.naam}" ingepland voor ${swapContext.targets.length === 1 ? '1 dag' : `${swapContext.targets.length} dagen`}.`
+        );
+        navigate('/dashboard');
+        return;
+      }
+
       const today = new Date().toISOString().split('T')[0];
       await addPlannedMeal(meal.id, today, meal.categorie || 'Diner');
       notify('Maaltijd ingepland voor vandaag.');
@@ -126,7 +159,7 @@ export default function MealDetailPage() {
               onClick={handlePlanToday}
               className="border border-green-200 bg-white px-4 py-2 text-sm font-semibold text-green-800 hover:bg-[#f4faf5] disabled:opacity-60"
             >
-              Vandaag plannen
+              {swapContext ? 'Kies vervanging' : 'Vandaag plannen'}
             </button>
           </div>
         </div>
