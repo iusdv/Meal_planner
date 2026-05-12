@@ -1226,8 +1226,8 @@ function WeeklyMacroTrendsCard({ summaries, goal }: { summaries: DailyMacroSumma
     : 0;
   const daysInRange = goalCalories > 0
     ? summaries.filter((summary) =>
-        summary.totals.calories >= goalCalories * 0.9 &&
-        summary.totals.calories <= goalCalories * 1.1
+        summary.totals.calories > 0 &&
+        summary.totals.calories <= goalCalories
       ).length
     : 0;
   const goalLineBottom = goalCalories > 0
