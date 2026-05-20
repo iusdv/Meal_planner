@@ -137,13 +137,13 @@ public class TheMealDbService
         await _db.SaveChangesAsync(cancellationToken);
     }
 
-//TODO anapassen enrich details van TheMealDB alleen als er een externe id is en velden nog niet compleet zijn.
-// OPMERKING: TheMealDB geeft receptdata terug in het Engels. Ik kon geen nette manier vinden om dit direct te vertalen.
-// Ik zou later een JSON-vertaaldataset kunnen gebruiken, maar heb eerst gefocust op belangrijkere plannerfunctionaliteit.
-//TODO Cronjob voor data verversen en updaten van bestaande items.
+    //TODO anapassen enrich details van TheMealDB alleen als er een externe id is en velden nog niet compleet zijn.
+    // OPMERKING: TheMealDB geeft receptdata terug in het Engels. Ik kon geen nette manier vinden om dit direct te vertalen.
+    // Ik zou later een JSON-vertaaldataset kunnen gebruiken, maar heb eerst gefocust op belangrijkere plannerfunctionaliteit.
+    //TODO Cronjob voor data verversen en updaten van bestaande items.
     public async Task<bool> EnrichMealDetailsAsync(Meal meal, CancellationToken cancellationToken = default)
     {
-      
+
         if (string.IsNullOrWhiteSpace(meal.ExternalMealDbId))
         {
             return false;
