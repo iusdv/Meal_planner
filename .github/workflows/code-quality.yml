@@ -1,0 +1,88 @@
+name: Code quality
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+      - "feature/**"
+      - "hotfix/**"
+      - "chore/**"
+  pull_request:
+    branches:
+      - develop
+      - main
+
+jobs:
+  frontend:
+    name: Frontend quality
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: MealplannerApp/frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: MealplannerApp/frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Unit tests
+        shell: pwsh
+        run: |
+          $package = Get-Content package.json -Raw | ConvertFrom-Json
+          if ($package.scripts.PSObject.Properties.Name -contains "test") {
+            npm test -- --run
+          } else {
+            Write-Host "No frontend test script found yet; skipping."
+          }
+
+  backend:
+    name: Backend quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore MealplannerApp/MealPlannerApi/MealPlannerApi.csproj
+
+      - name: Format check
+        run: dotnet format MealplannerApp/MealPlannerApi/MealPlannerApi.csproj --verify-no-changes --verbosity diagnostic
+
+      - name: Build
+        run: dotnet build MealplannerApp/MealPlannerApi/MealPlannerApi.csproj --configuration Release --no-restore
+
+      - name: Unit tests
+        shell: pwsh
+        run: |
+          $testProjects = Get-ChildItem -Path MealplannerApp -Recurse -Filter "*Tests.csproj"
+          if ($testProjects.Count -eq 0) {
+            Write-Host "No backend test projects found yet; skipping."
+            return
+          }
+
+          foreach ($project in $testProjects) {
+            dotnet test $project.FullName --configuration Release --no-restore --verbosity normal
+          }
