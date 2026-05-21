@@ -150,7 +150,7 @@ public class MealsController : ControllerBase
     // Haal maaltijd met ingredienten en voedingswaarden op.
     public async Task<IActionResult> GetById(int id)
     {
-        
+
         var meal = await _db.Meals
             .Include(m => m.MealIngredients)
                 .ThenInclude(mi => mi.Ingredient)
@@ -161,7 +161,7 @@ public class MealsController : ControllerBase
         {
             try
             {
-             // TODO enrich slow loading details van TheMealDB alleen als er een externe id is en velden nog niet compleet zijn.   
+                // TODO enrich slow loading details van TheMealDB alleen als er een externe id is en velden nog niet compleet zijn.
                 if (await _theMealDbService.EnrichMealDetailsAsync(meal))
                 {
                     await _db.SaveChangesAsync();

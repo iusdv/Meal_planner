@@ -4,41 +4,55 @@ import { getGoals, getProfile, upsertGoals, upsertProfile } from '../services/me
 import type { GoalDto, ProfileDto } from '../types';
 import {
   ACTIVITEITSNIVEAUS,
-  buildMealSlotsFromCounts,
+  createMealSlot,
   DOELTYPES,
-  getMealCategoryCounts,
+  getMealMomentCategory,
   getMealMomentDescription,
+  getMealMomentDisplayName,
   MAALTIJDCATEGORIEEN,
   estimateGoals,
   normalizeActivityValue,
   normalizeDietValue,
   normalizeGenderValue,
   parsePreferredMealTypes,
+  summarizeMealSlots,
   type MealCategory,
 } from '../utils/nutrition';
 import { useAuth } from '../context/useAuth';
 
+const EETMOMENT_AANTALLEN = [1, 2, 3, 4, 5, 6] as const;
+
 function normalizeMealSelection(selected: string[], count: number) {
   const boundedCount = Math.max(1, Math.min(count, 6));
-  const trimmed = selected.slice(0, boundedCount);
-  const counts = getMealCategoryCounts(trimmed);
-  const slots = buildMealSlotsFromCounts(counts);
+  const categories = selected.slice(0, boundedCount).map(getMealMomentCategory);
 
-  if (slots.length >= boundedCount) {
-    return slots.slice(0, boundedCount);
+  while (categories.length < boundedCount) {
+    categories.push(
+      MAALTIJDCATEGORIEEN.find((category) => !categories.includes(category)) ??
+        getDefaultCategoryForIndex(categories.length)
+    );
   }
 
-  const nextCounts = { ...counts };
-  let fillIndex = 0;
-  while (buildMealSlotsFromCounts(nextCounts).length < boundedCount) {
-    const preferredCategory =
-      MAALTIJDCATEGORIEEN.find((category) => nextCounts[category] === 0) ??
-      MAALTIJDCATEGORIEEN[fillIndex % MAALTIJDCATEGORIEEN.length];
-    nextCounts[preferredCategory] += 1;
-    fillIndex += 1;
-  }
+  return buildSlotsFromCategorySequence(categories);
+}
 
-  return buildMealSlotsFromCounts(nextCounts).slice(0, boundedCount);
+function buildSlotsFromCategorySequence(categories: MealCategory[]) {
+  const counts: Record<MealCategory, number> = {
+    Ontbijt: 0,
+    Lunch: 0,
+    Diner: 0,
+    Snack: 0,
+  };
+
+  return categories.map((category) => {
+    counts[category] += 1;
+    return createMealSlot(category, counts[category]);
+  });
+}
+
+function getDefaultCategoryForIndex(index: number): MealCategory {
+  const defaults: MealCategory[] = ['Ontbijt', 'Lunch', 'Diner', 'Snack', 'Lunch', 'Diner'];
+  return defaults[index] ?? 'Snack';
 }
 
 export default function ProfilePage() {
@@ -69,7 +83,8 @@ export default function ProfilePage() {
     getProfile()
       .then((response) => {
         const data = response.data;
-        const meals = normalizeMealSelection(parsePreferredMealTypes(data.gewensteMaaltijden), data.maaltijdenPerDag);
+        const mealCount = Math.max(1, Math.min(data.maaltijdenPerDag || 3, 6));
+        const meals = normalizeMealSelection(parsePreferredMealTypes(data.gewensteMaaltijden), mealCount);
         setProfile({
           gender: normalizeGenderValue(data.gender),
           leeftijd: data.leeftijd,
@@ -78,7 +93,7 @@ export default function ProfilePage() {
           activiteit: normalizeActivityValue(data.activiteit),
           dieetvoorkeur: normalizeDietValue(data.dieetvoorkeur),
           allergieen: data.allergieen,
-          maaltijdenPerDag: data.maaltijdenPerDag,
+          maaltijdenPerDag: mealCount,
           gewensteMaaltijden: meals.join(','),
         });
         setGeselecteerdeMaaltijden(meals);
@@ -99,10 +114,14 @@ export default function ProfilePage() {
       .catch(() => {});
   }, []);
 
-  const mealCategoryCounts = getMealCategoryCounts(geselecteerdeMaaltijden);
-
   const handleMealCountChange = (count: number) => {
-    const meals = normalizeMealSelection(geselecteerdeMaaltijden, count);
+    const currentCategories = geselecteerdeMaaltijden.map(getMealMomentCategory);
+    const nextCategories = Array.from(
+      { length: count },
+      (_, index) => currentCategories[index] ?? getDefaultCategoryForIndex(index)
+    );
+    const meals = buildSlotsFromCategorySequence(nextCategories);
+
     setGeselecteerdeMaaltijden(meals);
     setProfile((current) => ({
       ...current,
@@ -111,20 +130,10 @@ export default function ProfilePage() {
     }));
   };
 
-  const updateMealCategoryCount = (category: MealCategory, delta: number) => {
-    const currentCount = mealCategoryCounts[category];
-    const nextCount = Math.max(0, currentCount + delta);
-    const totalWithoutCurrent = geselecteerdeMaaltijden.length - currentCount;
-
-    if (totalWithoutCurrent + nextCount > profile.maaltijdenPerDag) {
-      setMsg(`Je kunt maximaal ${profile.maaltijdenPerDag} eetmomenten verdelen.`);
-      return;
-    }
-
-    const meals = buildMealSlotsFromCounts({
-      ...mealCategoryCounts,
-      [category]: nextCount,
-    });
+  const updateMealSlotCategory = (index: number, category: MealCategory) => {
+    const nextCategories = geselecteerdeMaaltijden.map(getMealMomentCategory);
+    nextCategories[index] = category;
+    const meals = buildSlotsFromCategorySequence(nextCategories);
 
     setGeselecteerdeMaaltijden(meals);
     setProfile((current) => ({
@@ -239,40 +248,62 @@ export default function ProfilePage() {
 
         <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
           <h2 className="mb-4 font-semibold text-gray-700">Plannerinstellingen</h2>
-          <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
-            <div className="h-fit rounded-xl border border-gray-200 bg-[#f8fcf9] p-4">
-              <label className="mb-2 block text-sm text-gray-600">Eetmomenten per dag</label>
-              <select
-                value={profile.maaltijdenPerDag}
-                onChange={(event) => handleMealCountChange(Number(event.target.value))}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
-              >
-                {[1, 2, 3, 4, 5, 6].map((count) => (
-                  <option key={count} value={count}>
-                    {count} {count === 1 ? 'eetmoment' : 'eetmomenten'} per dag
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="mb-2 block text-sm text-gray-600">Verdeling van je eetmomenten</label>
-              <div className="space-y-3">
-                {MAALTIJDCATEGORIEEN.map((item) => (
-                  <MealCategoryCountCard
-                    key={item}
-                    category={item}
-                    count={mealCategoryCounts[item]}
-                    description={getMealMomentDescription(item)}
-                    maxTotal={profile.maaltijdenPerDag}
-                    selectedTotal={geselecteerdeMaaltijden.length}
-                    onDecrease={() => updateMealCategoryCount(item, -1)}
-                    onIncrease={() => updateMealCategoryCount(item, 1)}
-                  />
-                ))}
-              </div>
-              <p className="mt-3 text-xs text-gray-500">
-                Je hebt nu {geselecteerdeMaaltijden.length} van de {profile.maaltijdenPerDag} eetmomenten verdeeld.
+          <div className="mx-auto max-w-3xl">
+            <div className="border-b border-green-100 pb-6">
+              <h3 className="text-lg font-semibold text-gray-900">Hoeveel eetmomenten wil je plannen?</h3>
+              <p className="mt-2 max-w-xl text-sm leading-6 text-gray-600">
+                Kies het aantal momenten per dag. Daarna geef je elk moment simpelweg een type.
               </p>
+              <label className="mt-4 block max-w-xs">
+                <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-green-700">Per dag</span>
+                <select
+                  value={profile.maaltijdenPerDag}
+                  onChange={(event) => handleMealCountChange(Number(event.target.value))}
+                  className="w-full rounded-2xl border border-green-200 bg-white px-4 py-3 text-sm font-semibold text-gray-900 focus:border-green-500 focus:outline-none"
+                >
+                  {EETMOMENT_AANTALLEN.map((count) => (
+                    <option key={count} value={count}>
+                      {count} eetmoment{count === 1 ? '' : 'en'}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="pt-6">
+              <h3 className="text-lg font-semibold text-gray-900">Welke momenten zijn dat?</h3>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600">
+                Wil je bijvoorbeeld twee keer ontbijten of twee keer dineren? Kies dan hetzelfde type meerdere keren.
+              </p>
+              <div className="mt-4 divide-y divide-green-100 rounded-[24px] border border-green-100 bg-[#fbfefb]">
+                {geselecteerdeMaaltijden.map((moment, index) => {
+                  const category = getMealMomentCategory(moment);
+
+                  return (
+                    <div key={`${moment}-${index}`} className="px-4 py-4">
+                      <div className="text-sm font-semibold text-green-700">Moment {index + 1}</div>
+                      <div>
+                        <div className="font-semibold text-gray-900">{getMealMomentDisplayName(moment, geselecteerdeMaaltijden)}</div>
+                        <div className="mt-1 text-sm text-gray-500">{getMealMomentDescription(moment)}</div>
+                      </div>
+                      <select
+                        value={category}
+                        onChange={(event) => updateMealSlotCategory(index, event.target.value as MealCategory)}
+                        className="mt-3 w-full max-w-xs rounded-2xl border border-green-200 bg-white px-4 py-3 text-sm font-medium text-gray-900 focus:border-green-500 focus:outline-none"
+                      >
+                        {MAALTIJDCATEGORIEEN.map((item) => (
+                          <option key={item} value={item}>
+                            {item}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-4 rounded-2xl bg-green-50 px-4 py-3 text-sm text-green-800">
+                Huidige verdeling: {summarizeMealSlots(geselecteerdeMaaltijden)}
+              </div>
             </div>
           </div>
         </div>
@@ -307,56 +338,6 @@ export default function ProfilePage() {
           {saving ? 'Opslaan...' : 'Profiel opslaan'}
         </button>
       </form>
-    </div>
-  );
-}
-
-function MealCategoryCountCard({
-  category,
-  count,
-  description,
-  maxTotal,
-  selectedTotal,
-  onDecrease,
-  onIncrease,
-}: {
-  category: MealCategory;
-  count: number;
-  description: string;
-  maxTotal: number;
-  selectedTotal: number;
-  onDecrease: () => void;
-  onIncrease: () => void;
-}) {
-  return (
-    <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white px-4 py-4 text-left sm:flex-row sm:items-center sm:justify-between">
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-3">
-          <div className="font-medium text-gray-800">{category}</div>
-          <div className="rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">{count}x</div>
-        </div>
-        <div className="mt-1 max-w-2xl text-xs leading-5 text-gray-500">{description}</div>
-      </div>
-
-      <div className="flex shrink-0 items-center gap-2 rounded-full border border-green-100 bg-[#f8fcf9] px-2 py-2">
-        <button
-          type="button"
-          onClick={onDecrease}
-          disabled={count === 0}
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-green-200 bg-white text-lg font-semibold text-green-700 disabled:opacity-35"
-        >
-          -
-        </button>
-        <div className="min-w-[44px] text-center text-base font-semibold text-gray-800">{count}</div>
-        <button
-          type="button"
-          onClick={onIncrease}
-          disabled={selectedTotal >= maxTotal}
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-green-200 bg-white text-lg font-semibold text-green-700 disabled:opacity-35"
-        >
-          +
-        </button>
-      </div>
     </div>
   );
 }
