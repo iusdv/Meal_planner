@@ -8,14 +8,14 @@ namespace MealPlannerApi.Tests;
 
 public class MySqlDatabaseIntegrationTests
 {
-    [Fact(DisplayName = "Database integratie - MySQL database is bereikbaar")]
+    [Fact(DisplayName = "Database integratie - MySQL database is bereikbaar met de app-configuratie")]
     public async Task ConfiguredMySqlDatabase_CanConnect()
     {
         await using var db = CreateConfiguredMySqlContext();
 
         var canConnect = await db.Database.CanConnectAsync();
 
-        Assert.True(canConnect, "De MySQL database is niet bereikbaar");
+        Assert.True(canConnect, "De MySQL database is niet bereikbaar met de huidige configuratie.");
     }
 
     [Fact(DisplayName = "Database integratie - MySQL database bevat de verwachte MealPlanner tabellen")]

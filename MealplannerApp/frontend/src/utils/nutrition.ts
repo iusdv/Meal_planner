@@ -1,5 +1,3 @@
-//IMPORTANT TODO UNIT TESTS maken voor alle nutrition logica.
-
 import type { GoalDto, MealDto, ProfileDto } from '../types';
 
 export type ProfileForm = Omit<ProfileDto, 'id' | 'userId'>;
@@ -70,7 +68,6 @@ export function normalizeDietValue(value?: string) {
 
   return mapping[value ?? ''] ?? 'Alles';
 }
-//TODO UNIT TEST maken voor deze normalization functies.
 export function getMealMomentCategory(value: string): MealCategory {
   const trimmed = value.trim();
   const normalized = trimmed.toLowerCase();
@@ -101,7 +98,6 @@ export function getMealCategoryCounts(slots: string[]) {
 
   return counts;
 }
-//TODO UNIT TESTS voor slot logic zoals createMealSlot, getMealMomentCategory en getMealCategoryCounts.
 export function buildMealSlotsFromCounts(counts: Partial<Record<MealCategory, number>>) {
   return MAALTIJDCATEGORIEEN.flatMap((category) => {
     const amount = Math.max(0, Math.floor(counts[category] ?? 0));
@@ -136,7 +132,6 @@ export function getMealMomentDescription(value: string) {
       return 'Extra eetmoment.';
   }
 }
-//TODO UNIT TESTS maken voor getMealMomentDescription en getMealMomentDisplayName
 export function getMealMomentDisplayName(value: string, allMoments: string[] = []) {
   const category = getMealMomentCategory(value);
   const sameCategoryCount = allMoments.filter((moment) => getMealMomentCategory(moment) === category).length;
@@ -148,7 +143,6 @@ export function getMealMomentDisplayName(value: string, allMoments: string[] = [
 
   return `${category} ${match?.[1] ?? '1'}`;
 }
-//TODO UNIT TEST maken voor distributeCaloriesAcrossMoments
 export function distributeCaloriesAcrossMoments(totalCalories: number, moments: string[]) {
   const fallbackMoments = moments.length > 0 ? moments : [...STANDAARD_MAALTIJDMOMENTEN];
   const weights = fallbackMoments.map((moment) => (isSnackMoment(moment) ? 0.65 : 1.2));
@@ -161,7 +155,6 @@ export function distributeCaloriesAcrossMoments(totalCalories: number, moments: 
     ])
   ) as Record<string, number>;
 }
-//TODO UNIT TEST maken voor berekening man en vrouw, verschillende activiteit niveaus en doelen
 export function estimateGoals(profile: ProfileForm, doelType = 'Balans'): GoalForm {
   const base =
     10 * profile.gewicht +
@@ -197,7 +190,6 @@ export function estimateGoals(profile: ProfileForm, doelType = 'Balans'): GoalFo
     vetdoel: fat,
   };
 }
-//TODO UNIT TEST maken voor check voorkeur maaltijdmomenten.
 export function parsePreferredMealTypes(value?: string | null) {
   const parsedCategories = (value ?? '')
     .split(',')
@@ -232,7 +224,6 @@ export function allergyTerms(profile?: ProfileForm | null): string[] {
     .map((term) => term.trim().toLowerCase())
     .filter(Boolean);
 }
-//TODO UNIT TEST maken check type dieet en allergieën.
 export function mealMatchesPreferences(meal: MealDto, profile?: ProfileForm | null): boolean {
   if (!profile) return true;
 
