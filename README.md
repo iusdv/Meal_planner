@@ -104,7 +104,7 @@ Frontend draait op: `http://localhost:5173`
 
 ---
 
-## 🛡️ Datapunt 6b – Bedreiging: Information Disclosure
+## Information Disclosure
 
 > *Information Disclosure* treedt op wanneer een applicatie onbedoeld gevoelige informatie lekt naar de client, zoals stack traces, interne exception-details of wachtwoordhashes.
 
