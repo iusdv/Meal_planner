@@ -1,6 +1,6 @@
 # .NET build outputs
-MealplannerApp/MealPlannerApi/bin/
-MealplannerApp/MealPlannerApi/obj/
+**/bin/
+**/obj/
 
 # Node modules and build output
 MealplannerApp/frontend/node_modules/
@@ -20,6 +20,7 @@ runtime-logs/
 # OS files
 .DS_Store
 Thumbs.db
+~$*.docx
 
 # Editor directories
 .vscode/
