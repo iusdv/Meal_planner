@@ -94,7 +94,7 @@ public static class ControllerTestContext
         return user;
     }
 
-    public static Meal AddMeal(MealPlannerDbContext db, int id, string name, string category = "Diner")
+    public static Meal AddMeal(MealPlannerDbContext db, int id, string name, string category = "Diner", bool isZelfgemaakt = false)
     {
         var meal = new Meal
         {
@@ -105,7 +105,8 @@ public static class ControllerTestContext
             Categorie = category,
             Bereidingstijd = 20,
             Porties = 1,
-            DieetLabels = "Anything"
+            DieetLabels = "Anything",
+            IsZelfgemaakt = isZelfgemaakt
         };
 
         db.Meals.Add(meal);
@@ -115,6 +116,9 @@ public static class ControllerTestContext
 
     public static AuthController CreateAuthController(MealPlannerDbContext db) =>
         new(db, new JwtService(JwtConfiguration()));
+
+    public static IngredientsController CreateIngredientsController(MealPlannerDbContext db) =>
+        new(db);
 
     public static MealsController CreateMealsController(MealPlannerDbContext db)
     {
