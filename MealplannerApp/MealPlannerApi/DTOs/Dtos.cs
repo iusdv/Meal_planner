@@ -8,8 +8,6 @@ public record PaginatedResultDto<T>(List<T> Items, int Page, int PageSize, int T
 public record RegisterDto(string Naam, string Email, string Wachtwoord);
 public record LoginDto(string Email, string Wachtwoord);
 public record AuthResponseDto(string Token, UserDto User);
-
-// User DTOs - WachtwoordHash is intentionally excluded to prevent Information Disclosure
 public record UserDto(int Id, string Naam, string Email, string Rol);
 
 // Profile DTOs

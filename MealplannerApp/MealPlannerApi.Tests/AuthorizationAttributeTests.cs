@@ -11,6 +11,7 @@ public class AuthorizationAttributeTests
         AssertControllerRequiresAuthorization<ProfileController>();
         AssertControllerRequiresAuthorization<GoalsController>();
         AssertControllerRequiresAuthorization<MealsController>();
+        AssertControllerRequiresAuthorization<IngredientsController>();
         AssertControllerRequiresAuthorization<PlannedMealsController>();
         AssertControllerRequiresAuthorization<FavoritesController>();
         AssertControllerRequiresAuthorization<SuggestionsController>();
