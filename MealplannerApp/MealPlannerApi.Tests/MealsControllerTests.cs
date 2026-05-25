@@ -1,4 +1,6 @@
 using MealPlannerApi.DTOs;
+using MealPlannerApi.Models;
+using MealPlannerApi.Services;
 using MealPlannerApi.Tests.Support;
 using Microsoft.AspNetCore.Mvc;
 
@@ -67,6 +69,66 @@ public class MealsControllerTests
         Assert.Single(page.Items);
         Assert.Equal("Eigen curry", page.Items[0].Naam);
         Assert.True(page.Items[0].IsZelfgemaakt);
+    }
+
+    [Fact(DisplayName = "Maaltijden - detail gebruikt opgeslagen voedingscache")]
+    public async Task GetById_UsesStoredNutritionCache()
+    {
+        using var database = TestDatabase.Create();
+        var meal = ControllerTestContext.AddMeal(database.Db, 500, "Cached rice bowl", "Lunch");
+        var ingredient = new Ingredient { Naam = "Rice", Eenheid = "g" };
+        var caloriesDefinition = new NutrientDefinition
+        {
+            Key = "calories",
+            Label = "Calories",
+            Section = "Main",
+            Unit = "kcal",
+            Highlight = true,
+            DisplayOrder = 0
+        };
+        var mapping = new IngredientNutritionMapping
+        {
+            Ingredient = ingredient,
+            Source = NutritionCatalog.FoodDataCentralSource,
+            SearchTerm = "rice",
+            ExternalFoodDescription = "Rice",
+            MatchedAtUtc = DateTime.UtcNow,
+            LastSyncedAtUtc = DateTime.UtcNow,
+            NutrientValues =
+            [
+                new IngredientNutrientValue
+                {
+                    NutrientDefinition = caloriesDefinition,
+                    ValuePer100g = 360,
+                    Unit = "kcal",
+                    LastSyncedAtUtc = DateTime.UtcNow
+                }
+            ]
+        };
+
+        database.Db.Ingredients.Add(ingredient);
+        database.Db.NutrientDefinitions.Add(caloriesDefinition);
+        database.Db.IngredientNutritionMappings.Add(mapping);
+        database.Db.MealIngredients.Add(new MealIngredient
+        {
+            Meal = meal,
+            Ingredient = ingredient,
+            Hoeveelheid = 100,
+            OrigineleHoeveelheid = "100 g"
+        });
+        database.Db.SaveChanges();
+
+        var controller = ControllerTestContext.CreateMealsController(database.Db);
+        ControllerTestContext.SetUser(controller, 1);
+
+        var result = await controller.GetById(meal.Id);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var dto = Assert.IsType<MealDto>(ok.Value);
+        Assert.NotNull(dto.NutritionFacts);
+        Assert.Equal("Voedingscache uit database", dto.NutritionFacts.Source);
+        Assert.Contains(dto.NutritionFacts.Sections.SelectMany(section => section.Rows),
+            row => row.Key == "calories" && row.Value == 360);
     }
 
     [Fact(DisplayName = "Maaltijden - gebruiker kan strikte zelfgemaakte maaltijd aanmaken")]
