@@ -186,10 +186,8 @@ public class MealsController : ControllerBase
         NutritionFactsDto? nutritionFacts = null;
         try
         {
-            // Bouw uitgebreide voedingslabels op basis van ingredientmapping.
-            // TODO: Cache NutritionFactsDto per meal in the database and return the cached value here
-            // instead of rebuilding FoodDataCentral nutrition facts on every detail page load.
-            nutritionFacts = await _foodDataCentralService.BuildNutritionFactsAsync(meal);
+            // Gebruik alleen opgeslagen voedingsdata op detailpagina's; de background/admin enrich flow vult de cache.
+            nutritionFacts = await _foodDataCentralService.BuildStoredNutritionFactsAsync(meal);
         }
         catch (Exception ex)
         {
