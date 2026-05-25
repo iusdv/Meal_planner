@@ -1,8 +1,10 @@
+using MealPlannerApi.Configuration;
 using MealPlannerApi.Data;
 using MealPlannerApi.DTOs;
 using MealPlannerApi.Models;
 using MealPlannerApi.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace MealPlannerApi.Controllers;
@@ -25,7 +27,7 @@ public class AuthController : ControllerBase
     /// before storage. The hash is NEVER returned to the client (DTO excludes it).
     /// </summary>
     [HttpPost("register")]
-    // TODO: Rate limiting toevoegen om misbruik van registratiepogingen te beperken.
+    [EnableRateLimiting(RateLimitPolicyNames.Auth)]
     public async Task<IActionResult> Register([FromBody] RegisterDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Naam) ||
@@ -55,7 +57,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
-    // TODO: Rate limiting toevoegen om brute-force loginpogingen te beperken.
+    [EnableRateLimiting(RateLimitPolicyNames.Auth)]
     public async Task<IActionResult> Login([FromBody] LoginDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Wachtwoord))

@@ -1,8 +1,11 @@
+using System.Security.Claims;
 using System.Text;
+using System.Threading.RateLimiting;
 using MealPlannerApi.Configuration;
 using MealPlannerApi.Data;
 using MealPlannerApi.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
@@ -69,6 +72,45 @@ builder.Services.AddCors(options =>
     });
 });
 
+var authRateLimit = builder.Configuration.GetValue("RateLimiting:Auth:PermitLimit", 8);
+var authRateWindowSeconds = builder.Configuration.GetValue("RateLimiting:Auth:WindowSeconds", 60);
+var suggestionsRateLimit = builder.Configuration.GetValue("RateLimiting:Suggestions:PermitLimit", 12);
+var suggestionsRateWindowSeconds = builder.Configuration.GetValue("RateLimiting:Suggestions:WindowSeconds", 60);
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        context.HttpContext.Response.ContentType = "application/json";
+        await context.HttpContext.Response.WriteAsJsonAsync(
+            new { message = "Te veel verzoeken. Wacht even en probeer het opnieuw." },
+            cancellationToken);
+    };
+
+    options.AddPolicy(RateLimitPolicyNames.Auth, httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            $"auth:{GetClientAddress(httpContext)}",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = authRateLimit,
+                Window = TimeSpan.FromSeconds(authRateWindowSeconds),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+
+    options.AddPolicy(RateLimitPolicyNames.Suggestions, httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            $"suggestions:{GetUserOrClientAddress(httpContext)}",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = suggestionsRateLimit,
+                Window = TimeSpan.FromSeconds(suggestionsRateWindowSeconds),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+});
+
 // Application services.
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient("Gemini");
@@ -111,9 +153,16 @@ else
 app.UseHttpsRedirection();
 app.UseCors("FrontendPolicy");
 app.UseAuthentication();
+app.UseRateLimiter();
 app.UseAuthorization();
 
 app.MapControllers();
 app.Map("/error", () => Results.Problem("An unexpected error occurred.", statusCode: 500));
 
 app.Run();
+
+static string GetClientAddress(HttpContext httpContext) =>
+    httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown-client";
+
+static string GetUserOrClientAddress(HttpContext httpContext) =>
+    httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? GetClientAddress(httpContext);
