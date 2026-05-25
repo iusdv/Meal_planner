@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import StatusToast from '../components/StatusToast';
 import { addFavorite, addPlannedMeal, getMeal } from '../services/mealService';
 import type { MealDto, NutritionFactRowDto, NutritionFactSectionDto } from '../types';
+import { getIngredientImageUrl } from '../utils/ingredientImages';
 import { calculateMealNutrition, macroPercentages, MACRO_COLORS, MACRO_LABELS_NL, scaleMeasure } from '../utils/nutrition';
 import {
   DASHBOARD_FLASH_STORAGE_KEY,
@@ -450,16 +451,6 @@ function formatValue(value: number, unit: string) {
 
 function formatPercent(value: number) {
   return value >= 10 ? Math.round(value) : Number(value.toFixed(1));
-}
-
-function getIngredientImageUrl(name: string) {
-  const normalized = name
-    .trim()
-    .toLowerCase()
-    .replace(/[()]/g, '')
-    .replace(/\s+/g, '_');
-
-  return `https://www.themealdb.com/images/ingredients/${encodeURIComponent(normalized)}-medium.png`;
 }
 
 function parseInstructionItems(text: string): InstructionItem[] {

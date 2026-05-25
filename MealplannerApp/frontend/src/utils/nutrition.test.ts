@@ -28,6 +28,7 @@ function meal(overrides: Partial<MealDto> = {}): MealDto {
     porties: 1,
     afbeeldingUrl: '',
     dieetLabels: 'Anything',
+    isZelfgemaakt: false,
     ingredienten: [],
     nutritionFacts: null,
     ...overrides,
@@ -271,6 +272,36 @@ describe('meal nutrition calculation', () => {
 
     expect(nutrition.calories).toBe(133);
     expect(nutrition.fat).toBe(15);
+    expect(nutrition.estimated).toBe(true);
+    expect(nutrition.hasData).toBe(true);
+  });
+
+  it('uses Dutch snack fallbacks when exact ingredient nutrition is missing', () => {
+    const nutrition = calculateMealNutrition(
+      meal({
+        naam: 'Stroopwafel',
+        ingredienten: [
+          {
+            ingredientId: 1,
+            ingredientNaam: 'stroop',
+            hoeveelheid: 100,
+            eenheid: 'g',
+            origineleHoeveelheid: '100 g',
+          },
+          {
+            ingredientId: 2,
+            ingredientNaam: 'wafel',
+            hoeveelheid: 1,
+            eenheid: 'stuk',
+            origineleHoeveelheid: '1 stuk',
+          },
+        ],
+      }),
+      1
+    );
+
+    expect(nutrition.calories).toBe(754);
+    expect(nutrition.carbs).toBe(147);
     expect(nutrition.estimated).toBe(true);
     expect(nutrition.hasData).toBe(true);
   });

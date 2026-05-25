@@ -266,6 +266,7 @@ const FALLBACK_MACROS: MacroEstimate[] = [
   { terms: ['beef', 'steak'], kcal: 250, protein: 26, carbs: 0, fat: 15 },
   { terms: ['salmon', 'fish', 'tuna'], kcal: 200, protein: 22, carbs: 0, fat: 12 },
   { terms: ['egg'], kcal: 143, protein: 13, carbs: 1, fat: 10 },
+  { terms: ['waffle', 'wafel', 'stroopwafel'], kcal: 450, protein: 5, carbs: 65, fat: 18 },
   { terms: ['rice', 'pasta', 'noodle'], kcal: 360, protein: 8, carbs: 75, fat: 2 },
   { terms: ['potato'], kcal: 77, protein: 2, carbs: 17, fat: 0 },
   { terms: ['bread', 'flour', 'tortilla'], kcal: 265, protein: 9, carbs: 49, fat: 3 },
@@ -275,7 +276,7 @@ const FALLBACK_MACROS: MacroEstimate[] = [
   { terms: ['cream', 'butter'], kcal: 717, protein: 1, carbs: 0, fat: 81 },
   { terms: ['oil', 'olive oil'], kcal: 884, protein: 0, carbs: 0, fat: 100 },
   { terms: ['avocado'], kcal: 160, protein: 2, carbs: 9, fat: 15 },
-  { terms: ['sugar', 'honey', 'syrup'], kcal: 304, protein: 0, carbs: 82, fat: 0 },
+  { terms: ['sugar', 'honey', 'syrup', 'stroop', 'siroop'], kcal: 304, protein: 0, carbs: 82, fat: 0 },
   { terms: ['apple', 'banana', 'fruit'], kcal: 75, protein: 1, carbs: 19, fat: 0 },
   { terms: ['broccoli', 'spinach', 'pepper', 'onion', 'tomato', 'carrot', 'vegetable'], kcal: 35, protein: 2, carbs: 7, fat: 0 },
 ];

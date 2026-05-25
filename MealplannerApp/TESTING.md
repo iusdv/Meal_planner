@@ -133,7 +133,7 @@ Deze tests controleren:
 
 ### `MealsControllerTests.cs`
 
-Controleert het maaltijdenoverzicht en pagination.
+Controleert het maaltijdenoverzicht, pagination en zelfgemaakte maaltijden.
 
 Deze tests controleren:
 
@@ -142,17 +142,20 @@ Deze tests controleren:
 - zoeken op naam werkt;
 - filteren op categorie werkt;
 - `excludeMealId` haalt een maaltijd uit de resultaten;
-- een te hoge pagina wordt teruggezet naar de laatste bestaande pagina.
+- een te hoge pagina wordt teruggezet naar de laatste bestaande pagina;
+- zelfgemaakte maaltijden kunnen worden aangemaakt;
+- bestaande ingredienten kunnen worden hergebruikt bij zelfgemaakte maaltijden;
+- ongeldige zelfgemaakte maaltijden worden geweigerd.
 
-### `AdminControllerTests.cs`
+### `IngredientsControllerTests.cs`
 
-Controleert basisgedrag van adminfunctionaliteit.
+Controleert ingredientzoeken voor de zelfgemaakte-maaltijd flow.
 
 Deze tests controleren:
 
-- users worden teruggegeven als DTO zonder wachtwoordhash;
-- voedingswaarden kunnen worden toegevoegd;
-- voedingswaarden kunnen worden bijgewerkt zonder dubbele records te maken.
+- lokale ingredienten worden als suggesties teruggegeven;
+- voedingswaarden worden meegegeven als die bekend zijn;
+- te korte of onherkenbare zoektermen geven geen suggesties terug.
 
 ### `ConnectionStringResolverTests.cs`
 
