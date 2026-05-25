@@ -81,6 +81,7 @@ public class MealPlannerDbContext : DbContext
             entity.Property(meal => meal.AfbeeldingUrl).HasMaxLength(1000);
             entity.Property(meal => meal.ExternalMealDbId).HasMaxLength(50);
             entity.Property(meal => meal.DieetLabels).IsRequired().HasMaxLength(500);
+            entity.Property(meal => meal.IsZelfgemaakt).IsRequired().HasDefaultValue(false);
             entity.HasIndex(meal => meal.ExternalMealDbId).IsUnique();
         });
 

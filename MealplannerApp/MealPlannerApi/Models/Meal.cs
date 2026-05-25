@@ -12,6 +12,7 @@ public class Meal
     public string? AfbeeldingUrl { get; set; }
     public string? ExternalMealDbId { get; set; }
     public string DieetLabels { get; set; } = string.Empty;
+    public bool IsZelfgemaakt { get; set; }
 
     public ICollection<MealIngredient> MealIngredients { get; set; } = new List<MealIngredient>();
     public ICollection<PlannedMeal> PlannedMeals { get; set; } = new List<PlannedMeal>();
