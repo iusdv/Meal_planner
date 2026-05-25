@@ -1,8 +1,10 @@
 using System.Security.Claims;
+using MealPlannerApi.Configuration;
 using MealPlannerApi.DTOs;
 using MealPlannerApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace MealPlannerApi.Controllers;
 
@@ -22,9 +24,9 @@ public class SuggestionsController : ControllerBase
     }
 
     [HttpPost]
+    [EnableRateLimiting(RateLimitPolicyNames.Suggestions)]
     public async Task<IActionResult> GetSuggestion([FromBody] SuggestionRequestDto dto)
     {
-        //TODO ratelimiting toevoegen tegen spam.
         var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         var answer = await _suggestionsService.GetSuggestionAsync(userId, dto.Vraag);
         return Ok(new SuggestionResponseDto(answer));

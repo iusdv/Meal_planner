@@ -1,5 +1,7 @@
 using MealPlannerApi.Controllers;
+using MealPlannerApi.Configuration;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace MealPlannerApi.Tests;
 
@@ -39,6 +41,14 @@ public class AuthorizationAttributeTests
         Assert.Empty(typeof(AuthController).GetCustomAttributes(typeof(AuthorizeAttribute), inherit: true));
     }
 
+    [Fact(DisplayName = "Autorisatie - auth en suggesties hebben rate limiting")]
+    public void SensitiveEndpoints_HaveRateLimiting()
+    {
+        AssertMethodHasRateLimit<AuthController>(nameof(AuthController.Register), RateLimitPolicyNames.Auth);
+        AssertMethodHasRateLimit<AuthController>(nameof(AuthController.Login), RateLimitPolicyNames.Auth);
+        AssertMethodHasRateLimit<SuggestionsController>(nameof(SuggestionsController.GetSuggestion), RateLimitPolicyNames.Suggestions);
+    }
+
     private static void AssertControllerRequiresAuthorization<TController>()
     {
         Assert.NotEmpty(typeof(TController).GetCustomAttributes(typeof(AuthorizeAttribute), inherit: true));
@@ -52,5 +62,15 @@ public class AuthorizationAttributeTests
             .Cast<AuthorizeAttribute>());
 
         Assert.Equal("Admin", attribute.Roles);
+    }
+
+    private static void AssertMethodHasRateLimit<TController>(string methodName, string policyName)
+    {
+        var method = typeof(TController).GetMethods()
+            .Single(method => method.Name == methodName);
+        var attribute = Assert.Single(method.GetCustomAttributes(typeof(EnableRateLimitingAttribute), inherit: true)
+            .Cast<EnableRateLimitingAttribute>());
+
+        Assert.Equal(policyName, attribute.PolicyName);
     }
 }
