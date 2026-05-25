@@ -28,6 +28,13 @@ export interface NutritionalValueDto {
   vet: number;
 }
 
+export interface IngredientDto {
+  id: number;
+  naam: string;
+  eenheid: string;
+  voedingswaarde?: NutritionalValueDto | null;
+}
+
 export interface MealDto {
   id: number;
   naam: string;
@@ -38,8 +45,32 @@ export interface MealDto {
   porties: number;
   afbeeldingUrl?: string;
   dieetLabels: string;
+  isZelfgemaakt: boolean;
   ingredienten: MealIngredientDto[];
   nutritionFacts?: NutritionFactsDto | null;
+}
+
+export interface CreateSelfMadeMealIngredientDto {
+  naam: string;
+  hoeveelheid: number;
+  eenheid: string;
+  ingredientId?: number | null;
+  kcalPer100?: number | null;
+  eiwitPer100?: number | null;
+  koolhydraatPer100?: number | null;
+  vetPer100?: number | null;
+}
+
+export interface CreateSelfMadeMealDto {
+  naam: string;
+  beschrijving: string;
+  instructies: string;
+  categorie: string;
+  bereidingstijd: number;
+  porties: number;
+  afbeeldingUrl: string;
+  dieetLabels?: string;
+  ingredienten: CreateSelfMadeMealIngredientDto[];
 }
 
 export interface PaginatedResultDto<T> {

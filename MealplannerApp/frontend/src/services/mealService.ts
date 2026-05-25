@@ -1,6 +1,8 @@
 import api from './api';
 import type {
   AuthResponseDto,
+  CreateSelfMadeMealDto,
+  IngredientDto,
   MealDto,
   PaginatedResultDto,
   PlannedMealDto,
@@ -33,6 +35,10 @@ export const getPlannerMeals = (categories: string[], perCategory = 18) =>
     },
   });
 export const getMeal = (id: number) => api.get<MealDto>(`/meals/${id}`);
+export const createSelfMadeMeal = (meal: CreateSelfMadeMealDto) =>
+  api.post<MealDto>('/meals/zelfgemaakt', meal);
+export const searchIngredients = (query: string, limit = 8) =>
+  api.get<IngredientDto[]>('/ingredients/search', { params: { query, limit } });
 
 // Planned meals
 export const getPlannedMeals = () => api.get<PlannedMealDto[]>('/plannedmeals');
