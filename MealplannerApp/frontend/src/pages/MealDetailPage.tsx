@@ -176,15 +176,15 @@ export default function MealDetailPage() {
             <section className="mx-auto max-w-[640px]">
               <p className="max-w-xl text-sm leading-6 text-gray-800">{meal.beschrijving}</p>
               <div className="mt-9 grid grid-cols-2 gap-x-10 gap-y-3 text-sm text-gray-800 sm:grid-cols-3">
-                <InfoStat label="Makes" value={`${servings} serving${servings === 1 ? '' : 's'}`} />
-                <InfoStat label="Prep Time" value={`${meal.bereidingstijd} minutes`} />
-                <InfoStat label="Category" value={meal.categorie} />
+                <InfoStat label="Porties" value={`${servings} ${formatPortions(servings)}`} />
+                <InfoStat label="Bereidingstijd" value={`${meal.bereidingstijd} minuten`} />
+                <InfoStat label="Categorie" value={meal.categorie} />
               </div>
             </section>
 
             <section className="mx-auto max-w-[640px]">
               <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-                <h2 className="text-center text-3xl font-semibold text-gray-800 sm:text-left">Ingredients</h2>
+                <h2 className="text-center text-3xl font-semibold text-gray-800 sm:text-left">Ingredienten</h2>
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <input
                     type="number"
@@ -194,7 +194,7 @@ export default function MealDetailPage() {
                     onChange={(event) => setServings(Math.max(1, Number(event.target.value)))}
                     className={`${PLAIN_NUMBER_INPUT_CLASS} w-20 border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gray-700`}
                   />
-                  <span>servings</span>
+                  <span>porties</span>
                 </div>
               </div>
 
@@ -217,7 +217,7 @@ export default function MealDetailPage() {
             </section>
 
             <section className="mx-auto max-w-[640px] pb-12">
-              <h2 className="mb-6 text-center text-3xl font-semibold text-gray-800">Directions</h2>
+              <h2 className="mb-6 text-center text-3xl font-semibold text-gray-800">Bereiding</h2>
               <InstructionList items={instructionItems} />
             </section>
           </main>
@@ -235,7 +235,7 @@ export default function MealDetailPage() {
                 className={`${PLAIN_NUMBER_INPUT_CLASS} w-16 border border-gray-300 px-2 py-1 text-right focus:outline-none focus:ring-1 focus:ring-gray-700`}
               />
               <select className="border border-gray-300 px-2 py-1 focus:outline-none focus:ring-1 focus:ring-gray-700" value="serving" onChange={() => undefined}>
-                <option value="serving">serving</option>
+                <option value="serving">portie</option>
               </select>
             </div>
 
@@ -369,17 +369,17 @@ function NutritionFactsLabel({
   return (
     <section className="border border-gray-900 bg-white p-2 text-gray-950">
       <div className="border-b-4 border-gray-900 pb-2">
-        <h2 className="text-3xl font-bold leading-none">Nutrition Facts</h2>
+        <h2 className="text-3xl font-bold leading-none">Voedingswaarden</h2>
         <p className="mt-1 text-xs">
-          For {servings} serving{servings === 1 ? '' : 's'} of {meal.naam.toLowerCase()}
+          Voor {servings} {formatPortions(servings)} van {meal.naam.toLowerCase()}
           {meal.nutritionFacts?.servingGrams ? ` (${formatValue(meal.nutritionFacts.servingGrams * servings / Math.max(1, meal.porties || 1), 'g')})` : ''}
         </p>
       </div>
 
       <div className="grid grid-cols-[1fr_82px_52px] border-b border-gray-300 py-1 text-[11px]">
-        <span>Nutrient</span>
-        <span className="text-right">Value</span>
-        <span className="text-right">%DV</span>
+        <span>Voedingsstof</span>
+        <span className="text-right">Waarde</span>
+        <span className="text-right">%ADH</span>
       </div>
 
       {sections.length === 0 ? (
@@ -388,7 +388,9 @@ function NutritionFactsLabel({
         sections.map((section) => (
           <div key={section.title}>
             {section.title !== 'Main' && (
-              <h3 className="mt-3 border-t-4 border-gray-900 pt-2 text-xl font-medium">{section.title}</h3>
+              <h3 className="mt-3 border-t-4 border-gray-900 pt-2 text-xl font-medium">
+                {formatNutritionSectionTitle(section.title)}
+              </h3>
             )}
             {section.rows.map((row) => (
               <NutritionFactRow key={`${section.title}-${row.key}`} row={row} />
@@ -428,13 +430,34 @@ function buildNutritionSections(meal: MealDto, servings: number, fallback: NonNu
     {
       title: 'Main',
       rows: [
-        { key: 'calories', label: 'Calories', value: fallback.calories, unit: 'kcal', dailyValuePercent: null, highlight: true },
-        { key: 'fat', label: 'Fat', value: fallback.fat, unit: 'g', dailyValuePercent: null, highlight: false },
-        { key: 'carbs', label: 'Carbs', value: fallback.carbs, unit: 'g', dailyValuePercent: null, highlight: false },
-        { key: 'protein', label: 'Protein', value: fallback.protein, unit: 'g', dailyValuePercent: null, highlight: true },
+        { key: 'calories', label: 'Calorieen', value: fallback.calories, unit: 'kcal', dailyValuePercent: null, highlight: true },
+        { key: 'fat', label: 'Vet', value: fallback.fat, unit: 'g', dailyValuePercent: null, highlight: false },
+        { key: 'carbs', label: 'Koolhydraten', value: fallback.carbs, unit: 'g', dailyValuePercent: null, highlight: false },
+        { key: 'protein', label: 'Eiwit', value: fallback.protein, unit: 'g', dailyValuePercent: null, highlight: true },
       ],
     },
   ];
+}
+
+function formatPortions(count: number) {
+  return count === 1 ? 'portie' : 'porties';
+}
+
+function formatNutritionSectionTitle(title: string) {
+  switch (title) {
+    case 'Vitamins and Minerals':
+      return 'Vitaminen en mineralen';
+    case 'Sugars':
+      return 'Suikers';
+    case 'Fats':
+      return 'Vetten';
+    case 'Fatty Acids':
+      return 'Vetzuren';
+    case 'Amino Acids':
+      return 'Aminozuren';
+    default:
+      return title;
+  }
 }
 
 function formatValue(value: number, unit: string) {

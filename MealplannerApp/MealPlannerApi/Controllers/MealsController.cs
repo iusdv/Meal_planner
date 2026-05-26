@@ -166,7 +166,6 @@ public class MealsController : ControllerBase
         {
             try
             {
-                // TODO enrich slow loading details van TheMealDB alleen als er een externe id is en velden nog niet compleet zijn.
                 if (await _theMealDbService.EnrichMealDetailsAsync(meal))
                 {
                     await _db.SaveChangesAsync();
